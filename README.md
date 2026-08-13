@@ -28,7 +28,7 @@ Full requirements, personas, and scope live in [`docs/PRD.md`](docs/PRD.md).
 | Frontend | React / Next.js + Tailwind (or Streamlit) |
 | Backend | FastAPI |
 | CI/CD | GitHub Actions |
-| Containerization | Docker |
+| Containerization | Docker |git status
 | Deployment | Render/Railway (API) + Vercel (frontend) |
 
 ## Architecture
@@ -85,9 +85,9 @@ Deployment (Docker + GitHub Actions CI/CD)
 
 | Role | Owns |
 |---|---|
-| **Member 1 — Data & Backend Lead** | Kaggle ingestion, PostgreSQL, data cleaning, SQL, FastAPI backend, backend CI/Docker |
-| **Member 2 — Design & Frontend Lead** | Personas & feature matrix, Figma (wireframes → UI kit → prototype), frontend build, frontend CI/Docker, deployment |
-| **Member 3 — Analytics & ML Lead** | EDA, feature engineering, model training/evaluation, final report |
+| **yashash — Data & Backend Lead** | Kaggle ingestion, PostgreSQL, data cleaning, SQL, FastAPI backend, backend CI/Docker |
+| **vasu — Design & Frontend Lead** | Personas & feature matrix, Figma (wireframes → UI kit → prototype), frontend build, frontend CI/Docker, deployment |
+| **saideep — Analytics & ML Lead** | EDA, feature engineering, model training/evaluation, final report |
 
 See `docs/PRD.md` Section 15 for the full day-by-day task breakdown per role.
 
