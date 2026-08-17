@@ -109,7 +109,7 @@ export default function ContentInsightsPage() {
             <h4 className="font-semibold text-sm text-text-primary">Sci-Fi & Drama Retention</h4>
           </div>
           <p className="text-xs text-text-secondary leading-relaxed">
-            Serialized Sci-Fi and Drama titles have >88% average completion rates, driving the highest 60-day renewal probabilities.
+            Serialized Sci-Fi and Drama titles have over 88% average completion rates, driving the highest 60-day renewal probabilities.
           </p>
         </div>
 
