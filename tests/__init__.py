@@ -1,0 +1,1 @@
+"""StreamPulse automated test suite."""

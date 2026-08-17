@@ -1,0 +1,2 @@
+# Architecture Diagram Placeholder
+# StreamPulse Data Flow: Ingestion -> Cleaning -> PostgreSQL -> ML Engine -> FastAPI -> Next.js UI

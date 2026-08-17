@@ -1,149 +1,234 @@
 # StreamPulse — Viewer Engagement Analytics for Subscriber Retention
 
-> A full-lifecycle data product that connects viewer engagement behavior to subscriber retention — built in 25 days, from documentation and Figma design through a deployed, ML-powered dashboard.
+> A full-lifecycle production data platform connecting streaming subscriber engagement behavior (watch duration, pause frequency, completion rate, session activity) to subscriber retention, empowering content acquisition and growth teams to make evidence-based decisions.
 
+---
 
-## Problem
+## 1. Overview & Business Impact
 
-A subscription-based streaming platform captures watch duration, pause frequency, episode completion rate, and session data — but content acquisition teams still greenlight new content without knowing which engagement patterns actually correlate with subscriber retention.
+A subscription-based streaming platform captures fine-grained playback telemetry — watch durations, pause events, episode completion rates, and login sessions. StreamPulse bridges telemetry with subscriber lifetime value by answering:
+1. **Which engagement behaviors predict whether a subscriber stays or churns?**
+2. **Which content/genres drive the strongest completion and retention patterns?**
+3. **What actionable interventions should acquisition and growth teams execute?**
 
-StreamPulse builds a data pipeline, a trained retention-prediction model, and a designed dashboard that answers:
+Full product specifications, persona matrices, and requirements live in [`docs/PRD.md`](docs/PRD.md). Detailed data pipeline decisions live in [`docs/ETL.md`](docs/ETL.md).
 
-1. Which engagement behaviors predict whether a subscriber stays or churns?
-2. Which content/genres drive the strongest engagement?
-3. What should the acquisition and growth teams do about it?
+---
 
-Full requirements, personas, and scope live in [`docs/PRD.md`](docs/PRD.md).
+## 2. Tech Stack
 
-## Tech Stack
-
-| Layer | Tool |
+| Layer | Technology |
 |---|---|
-| Data Source | Kaggle + Kaggle API |
-| Processing | Python, Pandas, NumPy |
-| Database | PostgreSQL |
-| Analysis | Jupyter/Colab, Matplotlib, Seaborn |
-| ML | Scikit-learn |
-| Design | Figma |
-| Frontend | React / Next.js + Tailwind (or Streamlit) |
-| Backend | FastAPI |
-| CI/CD | GitHub Actions |
-| Containerization | Docker |git status
-| Deployment | Render/Railway (API) + Vercel (frontend) |
+| **Language** | Python 3.11+, TypeScript |
+| **Data Processing** | pandas, numpy |
+| **Database** | PostgreSQL 15+ |
+| **Database Access** | SQLAlchemy 2.x, psycopg2-binary |
+| **Machine Learning** | scikit-learn (Random Forest, Logistic Regression), joblib |
+| **Notebooks & EDA** | Jupyter (`notebooks/01_eda.ipynb`) |
+| **Backend API** | FastAPI, uvicorn, Pydantic v2 |
+| **Frontend Dashboard** | Next.js 14 (App Router), React, Tailwind CSS |
+| **Data Visualization** | Recharts, Lucide Icons |
+| **Testing** | pytest, pytest-cov (backend) / Vitest, React Testing Library (frontend) |
+| **Code Quality** | flake8, black (Python) / ESLint (TypeScript) |
+| **Containerization** | Docker, docker-compose |
+| **CI/CD** | GitHub Actions (`backend-ci.yml`, `frontend-ci.yml`) |
 
-## Architecture
+---
 
-```
-Kaggle Dataset
-     │
-     ▼
-Ingestion (Kaggle API → staging)
-     │
-     ▼
-Cleaning & Validation (Pandas)
-     │
-     ▼
-PostgreSQL (fact tables + SQL views)
-     │
-     ▼
-EDA + Feature Engineering + Model Training (Scikit-learn)
-     │
-     ▼
-FastAPI (serves data + /predict)
-     │
-     ▼
-Dashboard (built from Figma spec, React/Next.js or Streamlit)
-     │
-     ▼
-Deployment (Docker + GitHub Actions CI/CD)
-```
-
-## Repository Structure
+## 3. Architecture & Data Flow
 
 ```
-.
-├── data/                  # raw/staging data (gitignored except samples)
+Kaggle API / Synthetic Fallback
+            │
+            ▼ (src/ingestion/run_pipeline.py)
+   data/raw/*.csv (4 Raw Entities)
+            │
+            ▼ (src/processing/clean.py & schema.py)
+   data/processed/*.csv (Cleaned & Validated)
+            │
+            ▼ (src/processing/load_to_postgres.py)
+ PostgreSQL Database (Schema & Analytics Views)
+            │
+            ▼ (src/ml/feature_engineering.py & train.py)
+ Machine Learning Engine (Precision >= 80% on Churn)
+            │
+            ▼ (src/api/main.py)
+ FastAPI REST Endpoints (/api/engagement-summary, /api/predict, etc.)
+            │
+            ▼ (frontend/lib/api.ts)
+ Next.js 4-Screen Analytical Dashboard
+```
+
+---
+
+## 4. Repository Structure
+
+```
+S70_StreamLogicUnit_RetentionMetrics/
+├── README.md                          # Main project overview and setup
+├── .gitignore                         # Git exclusion rules
+├── .env.example                       # Environment variables template
+├── requirements.txt                   # Pinned Python dependencies
+├── docker-compose.yml                 # Local multi-service orchestration
+├── Dockerfile                         # Backend API Dockerfile
+├── data/
+│   ├── raw/                           # Raw CSV files (.gitkeep)
+│   └── processed/                     # Cleaned CSV files (.gitkeep)
 ├── src/
-│   ├── ingestion/         # Kaggle import scripts
-│   ├── processing/        # cleaning, transformation, SQL loaders
-│   └── api/                # FastAPI backend
-├── notebooks/             # EDA and model training notebooks
-├── frontend/               # dashboard app
+│   ├── __init__.py
+│   ├── ingestion/
+│   │   ├── __init__.py
+│   │   ├── kaggle_downloader.py       # Kaggle API downloader
+│   │   ├── synthetic_data_generator.py# Synthetic fallback generator
+│   │   └── run_pipeline.py            # Ingestion orchestration entrypoint
+│   ├── processing/
+│   │   ├── __init__.py
+│   │   ├── schema.py                  # Schema validation contracts
+│   │   ├── clean.py                   # Data cleaning & imputation
+│   │   └── load_to_postgres.py        # Database schema init & CSV loader
+│   ├── ml/
+│   │   ├── __init__.py
+│   │   ├── feature_engineering.py     # Aggregated subscriber features
+│   │   ├── train.py                   # Model training (RF + LR)
+│   │   ├── evaluate.py                # Model evaluation & importance export
+│   │   └── predict.py                 # Live inference risk scoring
+│   └── api/
+│       ├── __init__.py
+│       ├── main.py                    # FastAPI application & CORS
+│       ├── database.py                # SQLAlchemy session dependencies
+│       ├── models.py                  # Pydantic v2 schemas
+│       └── routers/
+│           ├── __init__.py
+│           ├── engagement.py          # /api/engagement-summary & /api/content-insights
+│           ├── retention.py           # /api/retention-drivers
+│           └── predict.py             # /api/predict
+├── sql/
+│   ├── 001_create_schema.sql          # Table definitions
+│   ├── 002_create_views.sql           # Analytics SQL views
+│   └── 003_seed_check.sql             # Table integrity verification
+├── models/
+│   ├── .gitkeep
+│   ├── retention_model.pkl            # Trained model artifact (gitignored)
+│   ├── feature_columns.json           # Expected feature column order
+│   └── feature_importance.json        # Sorted feature importance scores
+├── notebooks/
+│   └── 01_eda.ipynb                   # Exploratory Data Analysis & visualizations
+├── tests/
+│   ├── __init__.py
+│   ├── test_clean.py                  # Cleaning & validation unit tests
+│   ├── test_api_engagement.py         # API engagement & content endpoints test
+│   └── test_predict_endpoint.py       # Predict inference endpoint tests
+├── frontend/
+│   ├── Dockerfile                     # Multi-stage Next.js Dockerfile
+│   ├── package.json                   # NPM dependencies & scripts
+│   ├── tailwind.config.ts             # Tailwind design tokens & themes
+│   ├── app/
+│   │   ├── layout.tsx                 # Root layout with NavSidebar
+│   │   ├── page.tsx                   # Screen 1: Executive Overview
+│   │   ├── engagement/page.tsx        # Screen 2: Engagement Deep-Dive
+│   │   ├── retention/page.tsx         # Screen 3: Retention Drivers & Simulator
+│   │   └── content/page.tsx           # Screen 4: Content/Genre Insights
+│   ├── components/
+│   │   ├── KpiCard.tsx                # Metric KPI card
+│   │   ├── ChartCard.tsx              # Card wrapper with loading/empty/error states
+│   │   ├── FilterBar.tsx              # Genre and date filter controls
+│   │   └── NavSidebar.tsx             # Navigation sidebar
+│   ├── lib/
+│   │   └── api.ts                     # Typed fetch client
+│   └── __tests__/
+│       └── smoke.test.tsx             # Vitest frontend smoke tests
 ├── docs/
-│   ├── PRD.md              # full product requirements document
-│   ├── ETL.md               # data pipeline documentation
-│   └── data-dictionary.md
-├── .github/
-│   ├── workflows/           # CI pipelines
-│   └── PULL_REQUEST_TEMPLATE.md
-└── README.md
+│   ├── PRD.md                         # Product Requirements Document
+│   ├── ETL.md                         # Detailed ETL pipeline documentation
+│   └── architecture.png               # Architecture schematic note
+└── .github/
+    ├── workflows/
+    │   ├── backend-ci.yml             # GitHub Actions backend CI
+    │   └── frontend-ci.yml            # GitHub Actions frontend CI
+    └── PULL_REQUEST_TEMPLATE.md       # PR review checklist
 ```
 
 ---
 
-## Team & Roles
+## 5. API Endpoints Reference
 
-| Role | Owns |
-|---|---|
-| **yashash — Data & Backend Lead** | Kaggle ingestion, PostgreSQL, data cleaning, SQL, FastAPI backend, backend CI/Docker |
-| **vasu — Design & Frontend Lead** | Personas & feature matrix, Figma (wireframes → UI kit → prototype), frontend build, frontend CI/Docker, deployment |
-| **saideep — Analytics & ML Lead** | EDA, feature engineering, model training/evaluation, final report |
+| Method | Path | Request Body | Response Description |
+|---|---|---|---|
+| `GET` | `/api/health` | - | `{"status": "ok"}` — Health check |
+| `GET` | `/api/engagement-summary?genre=&start_date=&end_date=` | - | `List[EngagementSummary]` from `vw_engagement_by_genre` |
+| `GET` | `/api/retention-drivers` | - | `List[RetentionDriver]` with plain-language business insights |
+| `GET` | `/api/content-insights?limit=10` | - | `List[ContentInsight]` from `vw_top_content` |
+| `POST` | `/api/predict` | `PredictRequest` | `PredictResponse` (risk score 0.0-1.0 and risk tier: low/medium/high) |
 
-See `docs/PRD.md` Section 15 for the full day-by-day task breakdown per role.
+Interactive OpenAPI documentation is available at `http://localhost:8000/docs`.
 
 ---
 
-## Getting Started
+## 6. Getting Started & Running Locally
 
+### 6.1 Prerequisites
+- Python 3.11+
+- Node.js 20+ & npm
+
+### 6.2 Setup Environment
 ```bash
-# clone
+# Clone the repository
 git clone https://github.com/kalviumcommunity/S70_StreamLogicUnit_RetentionMetrics.git
-cd streampulse
+cd S70_StreamLogicUnit_RetentionMetrics
 
-# python environment
-python -m venv venv
-source venv/bin/activate
+# Configure environment variables
+cp .env.example .env
+
+# Install Python dependencies
 pip install -r requirements.txt
 
-# configure secrets (Kaggle API token, DB credentials)
-cp .env.example .env   # then fill in values — never commit .env
-
-# run the pipeline
-python src/ingestion/run_pipeline.py
-
-# run the API locally
-uvicorn src.api.main:app --reload
-
-# run the frontend
-cd frontend && npm install && npm run dev
+# Install frontend dependencies
+cd frontend && npm install && cd ..
 ```
-## Project Timeline (25 Days)
 
-| Gate | Days | Focus |
-|---|---|---|
-| 1 — Documentation | 1–4 | BRD, PRD, personas, architecture |
-| 2 — Design | 5–9 | Figma wireframes → UI kit → prototype |
-| 3 — Implementation | 10–20 | Data pipeline, ML model, backend API, frontend build, integration |
-| 4 — DevOps | 21–24 | Docker, CI/CD, deployment |
-| 5 — Delivery | 25 | Final report, demo, presentation |
+### 6.3 Execute Pipeline & Train Model
+```bash
+# 1. Ingest Data (Kaggle or Synthetic Fallback)
+PYTHONPATH=. python src/ingestion/run_pipeline.py
+
+# 2. Clean & Validate Data
+PYTHONPATH=. python src/processing/clean.py
+
+# 3. Train & Evaluate ML Models
+PYTHONPATH=. python src/ml/train.py
+PYTHONPATH=. python src/ml/evaluate.py
+```
+
+### 6.4 Start Services
+```bash
+# Terminal 1: Start Backend API
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2: Start Frontend Dashboard
+cd frontend && npm run dev
+```
+
+Visit the dashboard at `http://localhost:3000`.
+
+### 6.5 Run with Docker Compose
+```bash
+docker-compose up --build
+```
 
 ---
 
-## Contribution Workflow (Daily PRs)
+## 7. Running Tests
 
-We ship one pull request per person per day, tied to that day's task in `docs/PRD.md`. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full branch naming, commit, and review workflow, and [`docs/PR_SCHEDULE.md`](docs/PR_SCHEDULE.md) for the exact PR scheduled for every day of the build.
+```bash
+# Backend unit & integration tests with coverage
+pytest --cov=src --cov-report=term-missing
 
-Quick version:
-1. Branch off `develop`: `git checkout -b <initials>/day<NN>-<short-task>`
-2. Do the day's task, commit with a conventional message
-3. Push and open a PR into `develop` using the PR template
-4. Get at least one teammate's review + passing CI
-5. Squash-merge, delete the branch
+# Backend linting
+flake8 src/ tests/ --max-line-length=120
 
-`develop` merges into `main` at each Gate checkpoint (Days 4, 9, 20, 24).
+# Frontend smoke tests
+cd frontend && npm test
 
----
-
-## License
-
-TBD.
+# Frontend linting
+cd frontend && npm run lint
+```
