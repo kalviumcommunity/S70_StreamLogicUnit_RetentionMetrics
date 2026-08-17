@@ -30,7 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include Routers with /api prefix
+# Mount Routers under /api prefix
 app.include_router(engagement.router, prefix="/api", tags=["Engagement"])
 app.include_router(retention.router, prefix="/api", tags=["Retention"])
 app.include_router(predict.router, prefix="/api", tags=["Predict"])

@@ -8,8 +8,8 @@ from src.api.models import RetentionDriver
 router = APIRouter()
 
 INTERPRETATIONS = {
-    "avg_completion_rate": "Subscribers with >75% completion rates show 3.2x higher 30-day retention.",
     "days_since_last_session": "Inactivity past 7 days is the single largest leading indicator of impending churn.",
+    "avg_completion_rate": "Subscribers with >75% completion rates show 3.2x higher 30-day retention.",
     "session_count": "High weekly engagement frequency directly buffers against churn risk.",
     "binge_score": "Multi-session viewing clusters signal strong content affinity and high lifetime value.",
     "avg_watch_duration": "Longer watch sessions correlate with higher subscription tenure.",

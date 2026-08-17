@@ -7,17 +7,17 @@ class EngagementSummary(BaseModel):
     """Aggregated engagement metrics by content genre."""
 
     genre: str
-    avg_completion_rate: float = Field(..., description="Average completion percentage (0.0 to 100.0 or 0 to 1)")
-    avg_watch_duration: float = Field(..., description="Average watch duration in minutes")
-    session_count: int = Field(..., description="Total number of logged sessions")
+    avg_completion_rate: float
+    avg_watch_duration: float
+    session_count: int
 
 
 class RetentionDriver(BaseModel):
     """Ranked retention feature importance with plain-language explanation."""
 
     feature: str
-    importance: float = Field(..., description="Feature importance weight/score")
-    interpretation: str = Field(..., description="Actionable business interpretation")
+    importance: float
+    interpretation: str
 
 
 class ContentInsight(BaseModel):
@@ -44,8 +44,8 @@ class PredictRequest(BaseModel):
 class PredictResponse(BaseModel):
     """Predicted churn risk score and categorical tier."""
 
-    risk_score: float = Field(..., ge=0.0, le=1.0, description="Probability of churn (0.0 - 1.0)")
-    risk_label: str = Field(..., description="Risk tier: 'low', 'medium', or 'high'")
+    risk_score: float
+    risk_label: str  # "low" | "medium" | "high"
 
 
 class HealthResponse(BaseModel):

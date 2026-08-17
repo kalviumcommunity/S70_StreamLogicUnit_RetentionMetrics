@@ -13,6 +13,7 @@ def predict_churn(payload: PredictRequest):
     features = payload.model_dump()
     risk_score = predict_risk(features)
 
+    # Classify into risk tiers
     if risk_score >= 0.65:
         risk_label = "high"
     elif risk_score >= 0.35:
