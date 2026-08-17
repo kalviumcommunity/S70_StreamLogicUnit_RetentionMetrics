@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: streampulse-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-streampulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-streampulse_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-streampulse_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/001_create_schema.sql:/docker-entrypoint-initdb.d/001_create_schema.sql
+      - ./sql/002_create_views.sql:/docker-entrypoint-initdb.d/002_create_views.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U streampulse -d streampulse_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: streampulse-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-streampulse}:${POSTGRES_PASSWORD:-streampulse_secret}@postgres:5432/${POSTGRES_DB:-streampulse_db}
+      ALLOWED_ORIGINS: http://localhost:3000,http://web:3000
+      MODEL_ARTIFACT_PATH: models/retention_model.pkl
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/api/health\")'"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: streampulse-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      API_BASE_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
