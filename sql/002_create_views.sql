@@ -1,7 +1,7 @@
 -- 002_create_views.sql
--- Analytics views for StreamPulse engagement, retention, and content analysis
+-- Analytics views for StreamPulse analytics platform
 
--- 1. Engagement aggregated by genre
+-- 1. Engagement metrics aggregated by genre
 CREATE OR REPLACE VIEW vw_engagement_by_genre AS
 SELECT 
     cm.genre,
@@ -10,10 +10,10 @@ SELECT
     COUNT(s.session_id) AS session_count
 FROM content_metadata cm
 LEFT JOIN engagement_events ee ON cm.content_id = ee.content_id
-LEFT JOIN sessions s ON 1=1 -- aggregated cross metrics or mapped via pipeline
+LEFT JOIN sessions s ON 1=1
 GROUP BY cm.genre;
 
--- 2. Weekly retention rate based on session activity and subscription tenure
+-- 2. Weekly retention rate based on active sessions and subscription status
 CREATE OR REPLACE VIEW vw_weekly_retention AS
 SELECT 
     DATE_TRUNC('week', s.session_date)::DATE AS week_start,

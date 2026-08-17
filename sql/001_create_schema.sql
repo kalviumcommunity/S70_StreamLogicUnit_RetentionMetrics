@@ -1,5 +1,5 @@
 -- 001_create_schema.sql
--- Base schema definitions for StreamPulse PostgreSQL database
+-- Exact table definitions for StreamPulse streaming telemetry and subscriber lifecycle
 
 CREATE TABLE IF NOT EXISTS content_metadata (
     content_id VARCHAR(50) PRIMARY KEY,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     tenure_days INTEGER
 );
 
--- Indices for performance
+-- Performance indices
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(session_date);
+CREATE INDEX IF NOT EXISTS idx_sessions_session_date ON sessions(session_date);
 CREATE INDEX IF NOT EXISTS idx_engagement_content_id ON engagement_events(content_id);
