@@ -1,7 +1,7 @@
 """Synthetic data generator fallback for StreamPulse analytics pipeline.
 
 Generates realistic streaming telemetry datasets with deliberate data imperfections
-(nulls, duplicates, mixed casing) and strong statistical retention signals.
+(nulls, duplicates, mixed casing) and clear statistical retention signals.
 """
 
 import logging
@@ -51,7 +51,6 @@ def generate_synthetic_data(
     # 1. Content Metadata
     content_ids = [f"CNT_{i:04d}" for i in range(1, n_content + 1)]
     genres_standard = ["Action", "Drama", "Comedy", "Sci-Fi", "Documentary", "Thriller", "Horror", "Animation"]
-    # Messy casing list
     genres_messy = ["Action", "action", "Drama", "drama", "DRAMA", "Comedy", "comedy ", "Sci-Fi", "SCI-FI",
                     "Documentary", "documentary", "Thriller", "Horror", "Animation"]
 
@@ -59,8 +58,7 @@ def generate_synthetic_data(
     content_genres = rng.choice(genres_messy, size=n_content)
     runtimes = rng.integers(22, 160, size=n_content).astype(float)
     # Inject ~3% nulls in runtime
-    null_runtime_mask = rng.random(n_content) < 0.03
-    runtimes[null_runtime_mask] = np.nan
+    runtimes[rng.random(n_content) < 0.03] = np.nan
 
     # Dates between 2020 and 2024
     start_ts = pd.Timestamp("2020-01-01").value // 10**9
@@ -78,18 +76,16 @@ def generate_synthetic_data(
 
     # 2. Subscriptions & Latent Engagement Scores
     user_ids = [f"USR_{i:05d}" for i in range(1, n_users + 1)]
-    # Latent affinity score determining both engagement and churn propensity (0 to 1)
-    latent_affinity = rng.beta(2.5, 2.5, size=n_users)
+    latent_affinity = rng.beta(1.8, 1.8, size=n_users)
 
-    # Churn probability is strongly inverse to latent affinity
-    churn_prob = 1.0 - (latent_affinity ** 1.3)
+    # Clear logistic relationship
+    churn_prob = 1.0 / (1.0 + np.exp(12.0 * (latent_affinity - 0.48)))
     churn_flags = rng.random(n_users) < churn_prob
     tenure_days = (latent_affinity * 600 + rng.integers(10, 100, size=n_users)).astype(float)
     # Inject nulls into tenure (~3%)
     tenure_days[rng.random(n_users) < 0.03] = np.nan
 
     subscription_statuses = np.where(churn_flags, "churned", "active")
-    # Small fraction paused
     paused_mask = (~churn_flags) & (rng.random(n_users) < 0.08)
     subscription_statuses[paused_mask] = "paused"
 
@@ -101,11 +97,10 @@ def generate_synthetic_data(
     })
 
     # 3. Sessions
-    # High affinity users have higher probability of appearing in sessions
-    session_user_weights = latent_affinity / latent_affinity.sum()
+    user_affinity_map = dict(zip(user_ids, latent_affinity))
+    session_user_weights = (latent_affinity + 0.02) / (latent_affinity + 0.02).sum()
     session_users = rng.choice(user_ids, size=n_sessions, p=session_user_weights)
 
-    # Session dates in 2024
     s_start_ts = pd.Timestamp("2024-01-01").value // 10**9
     s_end_ts = pd.Timestamp("2024-06-30").value // 10**9
     session_dates = [
@@ -114,21 +109,19 @@ def generate_synthetic_data(
     ]
 
     session_ids = [f"SES_{i:07d}" for i in range(1, n_sessions + 1)]
-    # Watch duration in minutes (correlated with user affinity)
-    user_affinity_map = dict(zip(user_ids, latent_affinity))
     session_affinities = np.array([user_affinity_map[u] for u in session_users])
 
     watch_durations = np.clip(
-        rng.normal(loc=session_affinities * 60 + 15, scale=12, size=n_sessions),
+        rng.normal(loc=session_affinities * 70 + 15, scale=6, size=n_sessions),
         5.0,
         180.0,
     ).round(2)
     # Inject ~3% nulls in watch duration
     watch_durations[rng.random(n_sessions) < 0.03] = np.nan
 
-    # Pauses: lower affinity users experience more pauses / distraction
+    # Pauses: higher affinity users experience fewer pauses
     pause_counts = np.clip(
-        rng.poisson(lam=(1.2 - session_affinities) * 3, size=n_sessions),
+        rng.poisson(lam=(1.1 - session_affinities) * 2.5, size=n_sessions),
         0,
         15,
     ).astype(float)
@@ -143,11 +136,9 @@ def generate_synthetic_data(
     })
 
     # 4. Engagement Events
-    # Map each session to a content title
     session_content = rng.choice(content_ids, size=n_sessions)
-    # Completion rate is higher for higher user affinity (0.0 to 100.0)
     completion_rates = np.clip(
-        rng.normal(loc=session_affinities * 65 + 30, scale=12, size=n_sessions),
+        rng.normal(loc=session_affinities * 70 + 25, scale=6, size=n_sessions),
         5.0,
         100.0,
     ).round(2)
@@ -166,7 +157,7 @@ def generate_synthetic_data(
         "device_type": devices,
     })
 
-    # Inject ~1% duplicate rows across tables for cleaning pipeline validation
+    # Inject ~1% duplicate rows
     def inject_duplicates(df: pd.DataFrame, pct: float = 0.01) -> pd.DataFrame:
         n_dup = int(len(df) * pct)
         if n_dup > 0:
