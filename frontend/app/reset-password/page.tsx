@@ -54,7 +54,7 @@ function ResetPasswordForm() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/auth/reset-password", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"}/api/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, new_password: newPassword }),

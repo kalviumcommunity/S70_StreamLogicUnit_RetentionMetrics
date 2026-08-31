@@ -151,7 +151,7 @@ export default function ContentPerformancePage() {
   }, []);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/content-performance?genre=${encodeURIComponent(selectedFilter)}&sort_by=${sortBy}&limit=7`)
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"}/api/content-performance?genre=${encodeURIComponent(selectedFilter)}&sort_by=${sortBy}&limit=7`)
       .then((res) => res.json())
       .then((data) => {
         if (data && data.items && data.items.length > 0) {

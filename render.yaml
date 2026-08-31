@@ -1,0 +1,62 @@
+# Render Blueprint Specification for STREAM PULSE
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # 1. FastAPI Backend Service
+  - type: web
+    name: streampulse-api
+    runtime: python
+    region: oregon
+    plan: free
+    branch: master
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: streampulse-db
+          property: connectionString
+
+  # 2. Next.js Frontend Service
+  - type: web
+    name: streampulse-web
+    runtime: node
+    region: oregon
+    plan: free
+    branch: master
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.12.0
+      - key: NEXT_PUBLIC_API_BASE_URL
+        fromService:
+          type: web
+          name: streampulse-api
+          property: host
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        value: AIzaSyAM-kDcGrqcGBitnpeevQ3GZvXSLK0a4xM
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        value: streampulse-analytics.firebaseapp.com
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        value: streampulse-analytics
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        value: streampulse-analytics.firebasestorage.app
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        value: "590084818182"
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        value: 1:590084818182:web:67b2ac0c153c2512500a87
+
+databases:
+  - name: streampulse-db
+    plan: free
+    region: oregon
+    databaseName: streampulse_db
+    user: streampulse

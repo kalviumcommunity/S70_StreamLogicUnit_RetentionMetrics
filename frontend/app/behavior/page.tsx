@@ -44,7 +44,7 @@ export default function ViewerBehaviorPage() {
   ];
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/behavior-stats")
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"}/api/behavior-stats`)
       .then((res) => res.json())
       .then((data) => {
         if (data && data.pipeline && data.funnel) {
