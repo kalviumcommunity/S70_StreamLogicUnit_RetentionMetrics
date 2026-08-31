@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Search,
   Bell,
-  User,
   Sparkles,
   Check,
   Trash2,
@@ -18,6 +17,8 @@ import {
   X,
   ExternalLink,
   ShieldCheck,
+  ArrowUpRight,
+  CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -30,44 +31,64 @@ interface TopHeaderProps {
 
 interface NotificationItem {
   id: string;
-  type: "alert" | "trend" | "system" | "content";
+  category: "CHURN ANOMALY" | "CATALOG SYNC" | "BINGE SURGE" | "CONVERSION CATALYST";
+  severity: "critical" | "success" | "info" | "warning";
   title: string;
   message: string;
+  metric: string;
   time: string;
+  actionLabel: string;
+  actionPath: string;
   read: boolean;
 }
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
+const STRUCTURED_NOTIFICATIONS: NotificationItem[] = [
   {
-    id: "1",
-    type: "alert",
-    title: "High Churn Risk Spike",
-    message: "42 subscribers in the 18-24 cohort exceeded 70% churn risk threshold.",
-    time: "5m ago",
+    id: "notif-1",
+    category: "CHURN ANOMALY",
+    severity: "critical",
+    title: "Cohort Inactivity Spike",
+    message: "42 subscribers in Tier-2 cohort exceeded 7 days inactivity. Predicted 30-day churn risk jumped to 38.4%.",
+    metric: "38.4% Risk",
+    time: "4m ago",
+    actionLabel: "Simulate Mitigation",
+    actionPath: "/retention",
     read: false,
   },
   {
-    id: "2",
-    type: "trend",
-    title: "The Irishman Surge",
-    message: "Watch time surged +28.4% over 24h following home carousel placement.",
-    time: "25m ago",
+    id: "notif-2",
+    category: "CATALOG SYNC",
+    severity: "success",
+    title: "Kaggle OTT Catalog Ingested",
+    message: "9,515 verified movie titles indexed with Rotten Tomatoes critic scores across Netflix, Prime Video, Hulu, Disney+.",
+    metric: "9,515 Titles",
+    time: "32m ago",
+    actionLabel: "View Catalog",
+    actionPath: "/content",
     read: false,
   },
   {
-    id: "3",
-    type: "system",
-    title: "ML Model Retrained",
-    message: "Random Forest churn predictor retrained with 50,000 session records (AUC: 0.91).",
+    id: "notif-3",
+    category: "BINGE SURGE",
+    severity: "info",
+    title: "Weekend Streaming Peak",
+    message: "Saturday 9:00 PM evening surge reached 19,450 concurrent streams with a 92% average completion rate.",
+    metric: "19.5K Streams",
     time: "2h ago",
+    actionLabel: "Inspect Heatmap",
+    actionPath: "/",
     read: false,
   },
   {
-    id: "4",
-    type: "content",
-    title: "Kaggle Dataset Sync",
-    message: "9,515 verified OTT movie titles loaded across Netflix, Prime Video, Hulu, and Disney+.",
-    time: "4h ago",
+    id: "notif-4",
+    category: "CONVERSION CATALYST",
+    severity: "warning",
+    title: "50% Watch Milestone Met",
+    message: "Subscribers surpassing 50% runtime milestone show an 88.4% full-season renewal probability.",
+    metric: "88.4% Conv",
+    time: "5h ago",
+    actionLabel: "Review Funnel",
+    actionPath: "/behavior",
     read: true,
   },
 ];
@@ -94,7 +115,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   const { user, logout } = useAuth();
 
   // Notifications State
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(STRUCTURED_NOTIFICATIONS);
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Profile Modal State
@@ -129,6 +150,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const markSingleAsRead = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  };
+
+  const dismissNotification = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   const clearAllNotifications = () => {
@@ -177,7 +208,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             }}
             onFocus={() => setShowSearchResults(true)}
             placeholder={searchPlaceholder}
-            className="w-full bg-[#0d1322] border border-[#1a243a] text-xs text-slate-200 placeholder-slate-500 rounded-xl pl-9 pr-8 py-2 focus:outline-none focus:border-cyan-500/80 transition-all"
+            className="w-full bg-[#0d1322] border border-[#1a243a] text-xs text-slate-200 placeholder-slate-500 rounded-xl pl-9 pr-8 py-2 focus:outline-none focus:border-cyan-500/80 transition-all shadow-sm"
           />
           {searchQuery && (
             <button
@@ -195,7 +226,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           {showSearchResults && searchQuery.trim() && (
             <div className="absolute top-full left-0 w-full mt-2 p-2 bg-[#0f1524] border border-[#1b263e] rounded-2xl shadow-2xl space-y-1 z-50 max-h-72 overflow-y-auto">
               <div className="text-[10px] font-bold text-slate-500 uppercase px-2 py-1 tracking-wider">
-                Catalog &amp; Intelligence Results ({filteredSearch.length})
+                Catalog &amp; Telemetry Results ({filteredSearch.length})
               </div>
               {filteredSearch.length > 0 ? (
                 filteredSearch.map((item, idx) => (
@@ -223,14 +254,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                 ))
               ) : (
                 <div className="p-4 text-center text-xs text-slate-400">
-                  No matching titles or features found for &quot;{searchQuery}&quot;
+                  No matching titles found for &quot;{searchQuery}&quot;
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Real-Time Notification Bell */}
+        {/* Real-Time Structured Notification Bell */}
         <div ref={notifRef} className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
@@ -245,78 +276,128 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             )}
           </button>
 
-          {/* Notifications Dropdown Panel */}
+          {/* Structured Notifications Dropdown Panel */}
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 p-4 bg-[#0f1524] border border-[#1b263e] rounded-2xl shadow-2xl space-y-3 z-50">
+            <div className="absolute right-0 top-full mt-2 w-80 sm:w-[420px] p-4 bg-[#0f1524] border border-[#1b263e] rounded-2xl shadow-2xl space-y-3 z-50">
               <div className="flex items-center justify-between border-b border-[#182238] pb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-white uppercase tracking-wider">
-                    Notifications
+                    System Telemetry Alerts
                   </span>
                   {unreadCount > 0 && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-400">
-                      {unreadCount} new
+                      {unreadCount} unread
                     </span>
                   )}
                 </div>
 
                 <div className="flex items-center gap-2 text-[11px]">
-                  <button
-                    onClick={markAllAsRead}
-                    className="text-slate-400 hover:text-cyan-400 flex items-center gap-1 transition-colors"
-                    title="Mark all as read"
-                  >
-                    <Check className="w-3 h-3" />
-                    <span>Read all</span>
-                  </button>
-                  <button
-                    onClick={clearAllNotifications}
-                    className="text-slate-500 hover:text-rose-400 transition-colors"
-                    title="Clear all"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-slate-400 hover:text-cyan-400 flex items-center gap-1 transition-colors"
+                      title="Mark all as read"
+                    >
+                      <Check className="w-3 h-3" />
+                      <span>Mark all read</span>
+                    </button>
+                  )}
+                  {notifications.length > 0 && (
+                    <button
+                      onClick={clearAllNotifications}
+                      className="text-slate-500 hover:text-rose-400 transition-colors"
+                      title="Clear all"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Notification Items List */}
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {/* Structured Notification Items List */}
+              <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
                 {notifications.length > 0 ? (
                   notifications.map((n) => {
-                    const iconMap = {
-                      alert: <AlertTriangle className="w-4 h-4 text-amber-400" />,
-                      trend: <TrendingUp className="w-4 h-4 text-emerald-400" />,
-                      system: <Database className="w-4 h-4 text-cyan-400" />,
-                      content: <Film className="w-4 h-4 text-purple-400" />,
+                    const badgeStyles = {
+                      critical: "bg-rose-950/80 text-rose-300 border-rose-800/80",
+                      success: "bg-emerald-950/80 text-emerald-300 border-emerald-800/80",
+                      info: "bg-cyan-950/80 text-cyan-300 border-cyan-800/80",
+                      warning: "bg-amber-950/80 text-amber-300 border-amber-800/80",
+                    };
+
+                    const iconStyles = {
+                      critical: <AlertTriangle className="w-4 h-4 text-rose-400" />,
+                      success: <Database className="w-4 h-4 text-emerald-400" />,
+                      info: <TrendingUp className="w-4 h-4 text-cyan-400" />,
+                      warning: <Film className="w-4 h-4 text-amber-400" />,
                     };
 
                     return (
                       <div
                         key={n.id}
-                        className={`p-3 rounded-xl border transition-all flex items-start gap-3 ${
+                        className={`p-3.5 rounded-xl border transition-all space-y-2 ${
                           n.read
-                            ? "bg-[#0c1220]/60 border-[#151c2e] text-slate-400"
-                            : "bg-[#121a2d] border-cyan-900/60 text-white"
+                            ? "bg-[#0c1220]/60 border-[#151c2e] text-slate-400 opacity-80"
+                            : "bg-[#11182a] border-cyan-900/60 text-white shadow-md shadow-cyan-950/20"
                         }`}
                       >
-                        <div className="mt-0.5 shrink-0">{iconMap[n.type]}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1 mb-0.5">
-                            <h4 className="text-xs font-semibold truncate">{n.title}</h4>
-                            <span className="text-[10px] text-slate-500 font-mono shrink-0">
-                              {n.time}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            {iconStyles[n.severity]}
+                            <span
+                              className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded border font-mono tracking-wider ${
+                                badgeStyles[n.severity]
+                              }`}
+                            >
+                              {n.category}
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-400 leading-relaxed">
-                            {n.message}
-                          </p>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-500 font-mono">{n.time}</span>
+                            {!n.read && (
+                              <button
+                                onClick={(e) => markSingleAsRead(n.id, e)}
+                                title="Mark as read"
+                                className="text-slate-500 hover:text-cyan-400"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => dismissNotification(n.id, e)}
+                              title="Dismiss"
+                              className="text-slate-500 hover:text-rose-400"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-100 flex items-center justify-between">
+                            <span>{n.title}</span>
+                            <span className="font-mono text-[11px] text-cyan-400 font-semibold">{n.metric}</span>
+                          </h4>
+                          <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{n.message}</p>
+                        </div>
+
+                        <div className="pt-1 flex justify-end">
+                          <Link
+                            href={n.actionPath}
+                            onClick={() => setShowNotifications(false)}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 hover:underline"
+                          >
+                            <span>{n.actionLabel}</span>
+                            <ArrowUpRight className="w-3 h-3" />
+                          </Link>
                         </div>
                       </div>
                     );
                   })
                 ) : (
-                  <div className="py-6 text-center text-xs text-slate-500">
-                    No active notifications. You&apos;re all caught up!
+                  <div className="py-8 text-center text-xs text-slate-500">
+                    No active telemetry alerts. All subscriber cohorts operating within nominal thresholds.
                   </div>
                 )}
               </div>
@@ -327,7 +408,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                   onClick={() => setShowNotifications(false)}
                   className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-1 transition-colors"
                 >
-                  <span>Configure Alert Thresholds</span>
+                  <span>Configure Telemetry Thresholds &amp; Webhooks</span>
                   <ExternalLink className="w-3 h-3" />
                 </Link>
               </div>

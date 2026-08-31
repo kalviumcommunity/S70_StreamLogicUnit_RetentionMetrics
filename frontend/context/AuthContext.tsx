@@ -18,6 +18,14 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
+  ssoLogin: (payload: {
+    provider: "google" | "microsoft" | "sso";
+    email: string;
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    organization?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
   signup: (payload: {
     first_name: string;
     last_name: string;
@@ -101,6 +109,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const ssoLogin = async (payload: {
+    provider: "google" | "microsoft" | "sso";
+    email: string;
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    organization?: string;
+  }) => {
+    try {
+      const res = await fetch("http://localhost:8000/api/auth/sso", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.detail || "SSO authentication failed." };
+      }
+
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem("streampulse_user", JSON.stringify(data.user));
+      }
+      if (data.access_token) {
+        localStorage.setItem("streampulse_token", data.access_token);
+      }
+
+      return { success: true };
+    } catch {
+      return { success: false, error: "Unable to connect to StreamPulse API." };
+    }
+  };
+
   const signup = async (payload: {
     first_name: string;
     last_name: string;
@@ -147,7 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, ssoLogin, signup, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
