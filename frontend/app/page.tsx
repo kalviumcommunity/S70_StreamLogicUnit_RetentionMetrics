@@ -232,7 +232,7 @@ export default function DashboardOverviewPage() {
       "Full Year": "year",
     };
     const code = apiRangeMap[timeRange] || "30d";
-    fetch(`http://localhost:8000/api/retention-summary?time_range=${code}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"}/api/retention-summary?time_range=${code}`)
       .then((res) => res.json())
       .catch(() => {});
   }, [timeRange]);
