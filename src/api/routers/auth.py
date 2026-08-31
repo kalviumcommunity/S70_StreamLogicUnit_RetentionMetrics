@@ -19,6 +19,7 @@ from src.api.auth_models import (
     PasswordResetToken,
     RegisterRequest,
     LoginRequest,
+    SSOAuthRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
     UserProfileResponse,
@@ -245,6 +246,80 @@ def login_user(req: LoginRequest, response: Response, db: Session = Depends(get_
     return AuthSuccessResponse(
         success=True,
         message="Signed in successfully.",
+        access_token=token,
+        user=user_profile,
+    )
+
+
+@router.post("/sso", response_model=AuthSuccessResponse)
+def sso_auth(req: SSOAuthRequest, response: Response, db: Session = Depends(get_db)):
+    """Authenticate or auto-provision user via Google, Microsoft, or Enterprise SAML/SSO."""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database connection unavailable")
+
+    email_clean = req.email.lower().strip()
+    if not is_valid_email(email_clean):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email format.")
+
+    provider_name = (req.provider or "SSO").capitalize()
+
+    # Look up existing user
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        # Auto-provision SSO user
+        full_name = req.full_name or email_clean.split("@")[0].replace(".", " ").title()
+        first_name = req.first_name or full_name.split(" ")[0]
+        last_name = req.last_name or (full_name.split(" ")[1] if len(full_name.split(" ")) > 1 else "")
+        random_hash = hash_password(secrets.token_urlsafe(32))
+
+        org = req.organization or f"{email_clean.split('@')[-1].split('.')[0].capitalize()} Media"
+
+        user = User(
+            email=email_clean,
+            full_name=full_name,
+            first_name=first_name,
+            last_name=last_name,
+            password_hash=random_hash,
+            role="Retention Specialist",
+            organization=org,
+            is_active=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        logger.info("Auto-provisioned new SSO user: %s via %s", email_clean, provider_name)
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account has been deactivated. Please contact support.",
+        )
+
+    token = create_access_token(user.email, user.id, remember_me=True)
+    response.set_cookie(
+        key="streampulse_token",
+        value=token,
+        httponly=True,
+        max_age=86400 * 30,
+        samesite="lax",
+        secure=False,
+    )
+
+    user_profile = UserProfileResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        role=user.role,
+        organization=user.organization,
+        is_active=user.is_active,
+        created_at=user.created_at,
+    )
+
+    return AuthSuccessResponse(
+        success=True,
+        message=f"Signed in via {provider_name}.",
         access_token=token,
         user=user_profile,
     )

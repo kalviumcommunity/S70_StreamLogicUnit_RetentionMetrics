@@ -68,6 +68,15 @@ class LoginRequest(BaseModel):
     remember_me: Optional[bool] = False
 
 
+class SSOAuthRequest(BaseModel):
+    provider: str  # "google", "microsoft", "sso"
+    email: str
+    full_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    organization: Optional[str] = None
+
+
 class ForgotPasswordRequest(BaseModel):
     email: str
 

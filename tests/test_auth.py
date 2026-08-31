@@ -81,3 +81,36 @@ def test_forgot_and_reset_password():
         "password": new_pass
     })
     assert login_res.status_code == 200
+
+
+def test_sso_authentication_flow():
+    # Google SSO
+    google_res = client.post("/api/auth/sso", json={
+        "provider": "google",
+        "email": "alex.turner@gmail.com",
+        "full_name": "Alex Turner",
+    })
+    assert google_res.status_code == 200
+    assert google_res.json()["success"] is True
+    assert "access_token" in google_res.json()
+    assert google_res.json()["user"]["email"] == "alex.turner@gmail.com"
+
+    # Microsoft SSO
+    ms_res = client.post("/api/auth/sso", json={
+        "provider": "microsoft",
+        "email": "sarah.connor@microsoft.com",
+        "full_name": "Sarah Connor",
+        "organization": "Microsoft Streaming Media",
+    })
+    assert ms_res.status_code == 200
+    assert ms_res.json()["success"] is True
+
+    # Enterprise SAML / Okta SSO
+    sso_res = client.post("/api/auth/sso", json={
+        "provider": "sso",
+        "email": "lead.data@netflix.corp",
+        "full_name": "Elena Rostova",
+        "organization": "Netflix Global",
+    })
+    assert sso_res.status_code == 200
+    assert sso_res.json()["success"] is True
