@@ -20,6 +20,17 @@ class RetentionDriver(BaseModel):
     interpretation: str
 
 
+class RetentionSummary(BaseModel):
+    """Overall subscriber retention and churn metrics summary."""
+
+    total_subscribers: int
+    active_subscribers: int
+    churned_subscribers: int
+    retention_rate_pct: float
+    churn_rate_pct: float
+    avg_tenure_days: float
+
+
 class ContentInsight(BaseModel):
     """Content performance and retention ranking."""
 

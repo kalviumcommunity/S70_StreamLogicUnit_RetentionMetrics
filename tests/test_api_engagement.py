@@ -67,6 +67,20 @@ def test_content_insights_endpoint():
         assert "total_sessions" in first
 
 
+def test_retention_summary_endpoint():
+    """Verify GET /api/retention-summary returns retention and churn KPIs."""
+    response = client.get("/api/retention-summary")
+    assert response.status_code == 200
+    data = response.json()
+    assert "total_subscribers" in data
+    assert "active_subscribers" in data
+    assert "churned_subscribers" in data
+    assert "retention_rate_pct" in data
+    assert "churn_rate_pct" in data
+    assert "avg_tenure_days" in data
+    assert data["total_subscribers"] > 0
+
+
 def test_database_dependency_override():
     """Verify endpoint behavior when database session is mock-overridden."""
     def mock_db():
@@ -79,3 +93,4 @@ def test_database_dependency_override():
         assert isinstance(response.json(), list)
     finally:
         app.dependency_overrides.clear()
+

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from src.api.models import HealthResponse
-from src.api.routers import engagement, retention, predict
+from src.api.routers import engagement, retention, predict, behavior, auth
 
 load_dotenv()
 
@@ -34,6 +34,9 @@ app.add_middleware(
 app.include_router(engagement.router, prefix="/api", tags=["Engagement"])
 app.include_router(retention.router, prefix="/api", tags=["Retention"])
 app.include_router(predict.router, prefix="/api", tags=["Predict"])
+app.include_router(behavior.router, prefix="/api", tags=["Behavior"])
+app.include_router(auth.router, prefix="/api", tags=["Authentication"])
+app.include_router(auth.router, prefix="", tags=["Authentication"])
 
 
 @app.get("/api/health", response_model=HealthResponse, tags=["Health"])

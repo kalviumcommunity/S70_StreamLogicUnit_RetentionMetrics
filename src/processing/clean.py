@@ -10,6 +10,8 @@ from pathlib import Path
 import pandas as pd
 from src.processing.schema import DATASET_CONTRACTS, validate_schema
 
+pd.set_option('future.no_silent_downcasting', True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
