@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Download, Calendar, CheckCircle2, ChevronDown, Activity, Clock, Flame, Users } from "lucide-react";
+import { Download, Calendar, CheckCircle2, ChevronDown, Activity, Clock, Users, ShieldCheck } from "lucide-react";
 
 interface TimeRangeData {
   kpis: {
@@ -123,15 +123,85 @@ const topShows = [
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const timeLabels = ["12 AM", "4 AM", "8 AM", "12 PM", "4 PM", "8 PM", "11 PM"];
 
-interface HoveredCell {
+type HeatmapTier = "Low (<3K)" | "Moderate" | "High (8-14K)" | "Peak Binge (15K+)";
+
+interface HeatmapCell {
   day: string;
   dayIdx: number;
   hour: number;
-  viewers: number;
-  intensity: "Low Traffic" | "Moderate" | "High Traffic" | "Peak Binge";
-  completion: string;
+  tier: HeatmapTier;
   color: string;
+  viewers: number;
+  completion: string;
 }
+
+// 100% Strict Mapping: Color -> Tier -> Viewer Volume -> Completion
+const getStrictHeatmapCell = (dayIdx: number, hour: number): HeatmapCell => {
+  const day = days[dayIdx];
+  const isWeekend = dayIdx >= 4; // Fri, Sat, Sun
+
+  // Peak Binge (15K+) -> Color #22d3ee (Bright Cyan)
+  // Evenings (8 PM - 10 PM) on Weekends and Peak Evenings
+  if ((isWeekend && hour >= 19 && hour <= 23) || (!isWeekend && hour >= 20 && hour <= 22)) {
+    const viewers = Math.round(15200 + ((hour - 19) * 1350) + (dayIdx * 650));
+    return {
+      day,
+      dayIdx,
+      hour,
+      tier: "Peak Binge (15K+)",
+      color: "#22d3ee",
+      viewers: Math.min(22400, Math.max(15100, viewers)),
+      completion: "92% - 96%",
+    };
+  }
+
+  // High (8-14K) -> Color #8b5cf6 (Purple)
+  // Afternoon/Evenings (5 PM - 8 PM & Weekend Afternoons)
+  if (
+    (hour >= 17 && hour <= 23) ||
+    (isWeekend && hour >= 12 && hour < 19) ||
+    (!isWeekend && (hour === 18 || hour === 19 || hour === 23))
+  ) {
+    const viewers = Math.round(8200 + (hour * 240) + (isWeekend ? 2100 : 400));
+    return {
+      day,
+      dayIdx,
+      hour,
+      tier: "High (8-14K)",
+      color: "#8b5cf6",
+      viewers: Math.min(14200, Math.max(8100, viewers)),
+      completion: "82% - 88%",
+    };
+  }
+
+  // Moderate -> Color #242b47 (Deep Slate/Indigo)
+  // Day-time (8 AM - 4 PM on weekdays, early morning on weekends)
+  if ((hour >= 7 && hour < 17) || (isWeekend && hour >= 0 && hour <= 2)) {
+    const viewers = Math.round(3200 + (hour * 310) + (isWeekend ? 1400 : 200));
+    return {
+      day,
+      dayIdx,
+      hour,
+      tier: "Moderate",
+      color: "#242b47",
+      viewers: Math.min(7800, Math.max(3100, viewers)),
+      completion: "70% - 78%",
+    };
+  }
+
+  // Low (<3K) -> Color #101626 (Dark Navy)
+  // Overnight & Early Morning (12 AM - 7 AM)
+  const viewers = Math.round(650 + (hour * 280) + (isWeekend ? 500 : 50));
+  return {
+    day,
+    dayIdx,
+    hour,
+    tier: "Low (<3K)",
+    color: "#101626",
+    viewers: Math.min(2900, Math.max(550, viewers)),
+    completion: "58% - 66%",
+  };
+};
 
 export default function DashboardOverviewPage() {
   const [timeRange, setTimeRange] = useState("Last 30 Days");
@@ -140,7 +210,7 @@ export default function DashboardOverviewPage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Real-time Heatmap Hover State
-  const [hoveredCell, setHoveredCell] = useState<HoveredCell | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<HeatmapCell | null>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -171,54 +241,8 @@ export default function DashboardOverviewPage() {
     return TIMEFRAME_CONFIGS[timeRange] || TIMEFRAME_CONFIGS["Last 30 Days"];
   }, [timeRange]);
 
-  // Compute realistic cell metrics
-  const getCellDetails = (dayIdx: number, hour: number): HoveredCell => {
-    let viewers = 0;
-    let intensity: "Low Traffic" | "Moderate" | "High Traffic" | "Peak Binge" = "Low Traffic";
-    let color = "#101626";
-    let completion = "64%";
-
-    if (hour < 6) {
-      viewers = Math.round(900 + (hour * 240) + (dayIdx >= 4 ? 600 : 100));
-      intensity = "Low Traffic";
-      color = dayIdx >= 4 ? "#182035" : "#101626";
-      completion = "62%";
-    } else if (hour < 12) {
-      viewers = Math.round(3800 + (hour * 450) + (dayIdx >= 4 ? 3200 : 800));
-      intensity = dayIdx >= 4 ? "High Traffic" : "Moderate";
-      color = dayIdx >= 4 ? "#2a3454" : "#1e263d";
-      completion = "74%";
-    } else if (hour < 17) {
-      viewers = Math.round(7200 + (hour * 600) + (dayIdx >= 4 ? 4500 : 1400));
-      intensity = "Moderate";
-      color = "#8b5cf6";
-      completion = "82%";
-    } else if (hour < 22) {
-      // Peak Evening (8 PM - 10 PM)
-      viewers = Math.round(14500 + ((hour - 17) * 1250) + (dayIdx >= 4 ? 3800 : 1200));
-      intensity = dayIdx >= 4 ? "Peak Binge" : "High Traffic";
-      color = dayIdx >= 4 ? "#22d3ee" : "#06b6d4";
-      completion = dayIdx >= 4 ? "92%" : "88%";
-    } else {
-      viewers = Math.round(8600 + (dayIdx >= 4 ? 4200 : 900));
-      intensity = "High Traffic";
-      color = dayIdx >= 4 ? "#06b6d4" : "#8b5cf6";
-      completion = "84%";
-    }
-
-    return {
-      day: days[dayIdx],
-      dayIdx,
-      hour,
-      viewers,
-      intensity,
-      color,
-      completion,
-    };
-  };
-
-  // Default readout when not hovering
-  const activeReadout = hoveredCell || getCellDetails(5, 21); // Default to Saturday 9:00 PM (Peak)
+  // Default readout when not hovering: Saturday 9:00 PM (Peak Binge)
+  const activeReadout = hoveredCell || getStrictHeatmapCell(5, 21);
 
   // Real-time Export Dashboard
   const handleExportDashboard = () => {
@@ -331,7 +355,7 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
-      {/* KPI Cards (4 Top Metrics updating dynamically by Timeframe) */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Retention Rate */}
         <div className="p-5 rounded-2xl bg-[#0f1524] border border-[#182238] shadow-sm">
@@ -498,7 +522,7 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
-      {/* Redesigned Viewer Engagement Heatmap with Real-Time Inspector */}
+      {/* Redesigned Viewer Engagement Heatmap strictly following Legend Tiers & Colors */}
       <div className="p-6 rounded-2xl bg-[#0f1524] border border-[#182238] shadow-sm space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#162035] pb-4">
           <div>
@@ -513,12 +537,12 @@ export default function DashboardOverviewPage() {
             </p>
           </div>
 
-          {/* Interactive Heatmap Live Readout Card */}
+          {/* Interactive Heatmap Live Readout Card strictly bound to cell color & tier */}
           <div className="p-3 rounded-xl bg-[#0c1220] border border-[#1a263e] flex items-center gap-4 text-xs">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-cyan-400 shrink-0" />
               <div>
-                <div className="text-[10px] text-slate-400 uppercase font-semibold">Inspected Slot</div>
+                <div className="text-[10px] text-slate-400 uppercase font-semibold">Time Slot</div>
                 <div className="font-bold text-white font-mono">
                   {activeReadout.day} · {activeReadout.hour === 0 ? "12 AM" : activeReadout.hour < 12 ? `${activeReadout.hour} AM` : activeReadout.hour === 12 ? "12 PM" : `${activeReadout.hour - 12} PM`}
                 </div>
@@ -530,7 +554,7 @@ export default function DashboardOverviewPage() {
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-purple-400 shrink-0" />
               <div>
-                <div className="text-[10px] text-slate-400 uppercase font-semibold">Active Streams</div>
+                <div className="text-[10px] text-slate-400 uppercase font-semibold">Streams Active</div>
                 <div className="font-bold text-white font-mono">
                   {activeReadout.viewers.toLocaleString()}
                 </div>
@@ -540,19 +564,19 @@ export default function DashboardOverviewPage() {
             <div className="h-6 w-[1px] bg-[#1a263e]" />
 
             <div>
-              <div className="text-[10px] text-slate-400 uppercase font-semibold">Traffic Status</div>
+              <div className="text-[10px] text-slate-400 uppercase font-semibold">Strict Classification</div>
               <span
                 className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded-md inline-block font-mono ${
-                  activeReadout.intensity === "Peak Binge"
-                    ? "bg-cyan-950 text-cyan-300 border border-cyan-700"
-                    : activeReadout.intensity === "High Traffic"
-                    ? "bg-purple-950 text-purple-300 border border-purple-700"
-                    : activeReadout.intensity === "Moderate"
+                  activeReadout.tier === "Peak Binge (15K+)"
+                    ? "bg-cyan-950 text-cyan-300 border border-cyan-500 shadow-md shadow-cyan-500/20"
+                    : activeReadout.tier === "High (8-14K)"
+                    ? "bg-purple-950 text-purple-300 border border-purple-600 shadow-md shadow-purple-600/20"
+                    : activeReadout.tier === "Moderate"
                     ? "bg-indigo-950 text-indigo-300 border border-indigo-700"
                     : "bg-[#101626] text-slate-400 border border-slate-700"
                 }`}
               >
-                {activeReadout.intensity}
+                {activeReadout.tier}
               </span>
             </div>
           </div>
@@ -567,7 +591,7 @@ export default function DashboardOverviewPage() {
               </span>
               <div className="flex-1 flex gap-1.5">
                 {Array.from({ length: 24 }).map((_, hour) => {
-                  const cell = getCellDetails(dayIdx, hour);
+                  const cell = getStrictHeatmapCell(dayIdx, hour);
                   const isSelected =
                     hoveredCell?.dayIdx === dayIdx && hoveredCell?.hour === hour;
 
@@ -579,11 +603,11 @@ export default function DashboardOverviewPage() {
                       onFocus={() => setHoveredCell(cell)}
                       className={`h-7 flex-1 rounded-md transition-all duration-150 relative cursor-pointer ${
                         isSelected
-                          ? "ring-2 ring-cyan-400 ring-offset-1 ring-offset-[#0f1524] scale-125 z-30 shadow-lg shadow-cyan-500/50"
+                          ? "ring-2 ring-cyan-400 ring-offset-1 ring-offset-[#0f1524] scale-125 z-30 shadow-lg shadow-cyan-500/60"
                           : "hover:scale-110 hover:z-20 opacity-90 hover:opacity-100"
                       }`}
                       style={{ backgroundColor: cell.color }}
-                      aria-label={`${day} at ${hour}:00, ${cell.intensity}`}
+                      aria-label={`${day} at ${hour}:00, ${cell.tier}`}
                     />
                   );
                 })}
@@ -602,29 +626,29 @@ export default function DashboardOverviewPage() {
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-[#162035]">
+        {/* Strict Legend with exact matching colors and data ranges */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-400 pt-2 border-t border-[#162035]">
           <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Hover any block to inspect active viewers, completion affinity, and binge density.</span>
+            <Activity className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span>Hover any block to inspect live stream count strictly calculated from color tier.</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-[#101626] border border-slate-700"></span>
-              <span className="text-[11px]">Low (&lt;3K)</span>
+              <span className="w-3.5 h-3.5 rounded-sm bg-[#101626] border border-slate-700"></span>
+              <span className="text-[11px] font-mono">Low (&lt;3K)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-[#1e263d]"></span>
-              <span className="text-[11px]">Moderate</span>
+              <span className="w-3.5 h-3.5 rounded-sm bg-[#242b47] border border-indigo-900"></span>
+              <span className="text-[11px] font-mono">Moderate</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-[#8b5cf6]"></span>
-              <span className="text-[11px]">High (8-14K)</span>
+              <span className="w-3.5 h-3.5 rounded-sm bg-[#8b5cf6] border border-purple-500"></span>
+              <span className="text-[11px] font-mono text-purple-300">High (8-14K)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-[#22d3ee]"></span>
-              <span className="text-[11px] font-semibold text-cyan-300">Peak Binge (15K+)</span>
+              <span className="w-3.5 h-3.5 rounded-sm bg-[#22d3ee] border border-cyan-400 shadow-sm shadow-cyan-400/50"></span>
+              <span className="text-[11px] font-mono font-bold text-cyan-300">Peak Binge (15K+)</span>
             </div>
           </div>
         </div>
