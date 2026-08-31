@@ -9,33 +9,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#0a0d14",
-        surface: "#111726",
-        "surface-elevated": "#182238",
-        border: "#1e293b",
+        background: "#080c14",
+        sidebar: "#0b0f19",
+        card: "#0f1523",
+        "card-hover": "#131b2d",
+        "card-border": "#1a2236",
+        border: "#1a2236",
         primary: {
-          DEFAULT: "#38bdf8",
-          hover: "#0284c7",
-          muted: "#0369a1",
+          DEFAULT: "#00f0ff",
+          purple: "#8b5cf6",
+          blue: "#3b82f6",
+          cyan: "#06b6d4",
+          emerald: "#10b981",
         },
-        accent: "#6366f1",
         text: {
-          primary: "#f8fafc",
+          primary: "#ffffff",
           secondary: "#94a3b8",
           muted: "#64748b",
         },
-        risk: {
-          low: "#10b981",      // Success green
-          medium: "#f59e0b",   // Warning amber
-          high: "#ef4444",     // Danger red
-        },
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
       },
     },
   },
   plugins: [],
 };
+
 
 export default config;

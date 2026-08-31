@@ -4,73 +4,86 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  BarChart3,
-  TrendingUp,
-  Film,
-  Activity,
+  BarChart2,
+  Tv,
+  Users,
+  Sparkles,
+  Settings,
 } from "lucide-react";
 
 export const NavSidebar: React.FC = () => {
   const pathname = usePathname();
 
   const navItems = [
-    { label: "Overview", href: "/", icon: LayoutDashboard },
-    { label: "Engagement", href: "/engagement", icon: BarChart3 },
-    { label: "Retention Drivers", href: "/retention", icon: TrendingUp },
-    { label: "Content Insights", href: "/content", icon: Film },
+    { label: "Dashboard", href: "/", icon: BarChart2 },
+    { label: "Content Insights", href: "/content", icon: Tv },
+    { label: "Viewer Behavior", href: "/behavior", icon: Users },
+    { label: "AI Recommendations", href: "/retention", icon: Sparkles },
+    { label: "Settings", href: "/settings", icon: Settings },
   ];
 
   return (
-    <aside className="w-64 bg-surface border-r border-border min-h-screen flex flex-col p-4">
-      {/* Brand Header */}
-      <div className="flex items-center space-x-3 px-3 py-4 mb-6 border-b border-border/60">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-background font-black shadow-md shadow-primary/20">
-          <Activity className="w-5 h-5 text-background" />
+    <aside className="w-64 bg-[#0b0f19] border-r border-[#151c2e] min-h-screen flex flex-col justify-between p-4 flex-shrink-0 select-none">
+      <div>
+        {/* RetentionIQ Brand Logo */}
+        <div className="flex items-center space-x-3 px-3 py-3 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+            <div className="w-4 h-4 rounded border-2 border-white flex items-center justify-center">
+              <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+            </div>
+          </div>
+          <span className="text-lg font-bold tracking-tight text-white">
+            RetentionIQ
+          </span>
         </div>
-        <div>
-          <h1 className="text-base font-bold tracking-tight text-text-primary">
-            StreamPulse
-          </h1>
-          <p className="text-[10px] uppercase font-semibold tracking-wider text-text-muted">
-            Retention Analytics
-          </p>
-        </div>
+
+        {/* Navigation Links */}
+        <nav className="space-y-1.5">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname === item.href ||
+                  (item.href === "/behavior" && pathname === "/engagement");
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-[#141b2d] text-white border border-[#202c48] shadow-sm font-semibold"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-[#0f1422]"
+                }`}
+              >
+                <Icon
+                  className={`w-4 h-4 ${
+                    isActive ? "text-cyan-400" : "text-slate-500"
+                  }`}
+                />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="space-y-1.5 flex-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? "bg-primary/10 text-primary font-semibold border-l-2 border-primary"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated"
-              }`}
-            >
-              <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-text-muted"}`} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Persona Context Badge */}
-      <div className="bg-surface-elevated/60 border border-border rounded-lg p-3 text-xs">
-        <p className="text-[10px] uppercase font-bold text-text-muted tracking-wider mb-1">
-          Active Workspace
-        </p>
-        <p className="text-text-primary font-medium">Growth & Retention Unit</p>
-        <p className="text-text-muted text-[11px] mt-0.5">Live ML Inference v1.0</p>
+      {/* Elena Rostova User Profile Card at Bottom */}
+      <div className="p-2.5 rounded-xl bg-[#0c1220] border border-[#162035] flex items-center space-x-3">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 to-purple-600 p-[1.5px] flex-shrink-0">
+          <div className="w-full h-full rounded-full bg-[#0c1220] flex items-center justify-center text-cyan-300 font-bold text-xs">
+            ER
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-white truncate">
+            Elena Rostova
+          </p>
+          <p className="text-[10px] text-slate-400 truncate">
+            Lead Architect
+          </p>
+        </div>
       </div>
     </aside>
   );
