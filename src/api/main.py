@@ -43,4 +43,3 @@ app.include_router(auth.router, prefix="", tags=["Authentication"])
 def health_check():
     """Health check endpoint for container orchestrators and CI/CD smoke tests."""
     return HealthResponse(status="ok")
-

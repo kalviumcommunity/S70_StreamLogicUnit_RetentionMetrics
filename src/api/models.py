@@ -31,7 +31,6 @@ class RetentionSummary(BaseModel):
     avg_tenure_days: float
 
 
-
 class ContentInsight(BaseModel):
     """Content performance and retention ranking."""
 

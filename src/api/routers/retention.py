@@ -89,4 +89,3 @@ def get_retention_summary():
         churn_rate_pct=58.0,
         avg_tenure_days=312.4,
     )
-

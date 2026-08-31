@@ -3,7 +3,6 @@
 import logging
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from fastapi import APIRouter
 
@@ -70,7 +69,7 @@ def get_behavior_stats():
         for wk in range(1, 9):
             row = {"week": f"Wk {wk}"}
             for ci in range(5):
-                cohort = sub_df.iloc[ci * cohort_size : (ci + 1) * cohort_size]
+                cohort = sub_df.iloc[ci * cohort_size:(ci + 1) * cohort_size]
                 # Retention = fraction who have tenure_days >= wk*7
                 survived = (cohort["tenure_days"] >= wk * 7).mean() * 100
                 # Apply cohort-ordering decay: newer cohorts retain better

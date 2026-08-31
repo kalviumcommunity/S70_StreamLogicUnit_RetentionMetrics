@@ -153,8 +153,14 @@ def get_content_insights(
 
 @router.get("/content-performance")
 def get_content_performance(
-    genre: Optional[str] = Query("All", description="Platform or genre filter (All, Netflix, Prime Video, Hulu, Disney+, Drama, Thriller, Comedy, Sci-Fi, Documentary)"),
-    sort_by: Optional[str] = Query("retention", description="Sort criteria: retention, completion, watch_time, sub_impact"),
+    genre: Optional[str] = Query(
+        "All",
+        description="Platform or genre filter (All, Netflix, Prime Video, Hulu, Disney+, Drama, Comedy, Sci-Fi)",
+    ),
+    sort_by: Optional[str] = Query(
+        "retention",
+        description="Sort criteria: retention, completion, watch_time, sub_impact",
+    ),
     limit: int = Query(10, ge=1, le=50, description="Max titles to return"),
 ):
     """Retrieve full content performance metrics computed directly from real Kaggle movie telemetry."""
@@ -170,7 +176,8 @@ def get_content_performance(
         k_df["rt_num"] = k_df["Rotten Tomatoes"].str.extract(r"(\d+)").astype(float).fillna(70.0)
 
         # Merge sessions & subscriptions
-        m = e_df.merge(s_df[["session_id", "user_id", "watch_duration_min", "pause_count"]], on="session_id", how="left")
+        sess_cols = ["session_id", "user_id", "watch_duration_min", "pause_count"]
+        m = e_df.merge(s_df[sess_cols], on="session_id", how="left")
         m = m.merge(sub_df[["user_id", "churn_flag"]], on="user_id", how="left")
 
         agg = m.groupby("content_id").agg(
@@ -180,23 +187,24 @@ def get_content_performance(
             churn_rate=("churn_flag", "mean"),
         ).reset_index()
 
-        merged = k_df.merge(agg, on="content_id", how="left").fillna({
-            "total_sessions": 8,
-            "watch_minutes": 420,
-            "avg_completion": 0.72,
-            "churn_rate": 0.18,
-        })
+        merged = k_df.merge(agg, on="content_id", how="left")
+        merged["total_sessions"] = merged["total_sessions"].fillna(12)
+        merged["watch_minutes"] = merged["watch_minutes"].fillna(320)
+        merged["avg_completion"] = merged["avg_completion"].fillna(0.72)
+        merged["churn_rate"] = merged["churn_rate"].fillna(0.12)
 
-        # Apply platform or genre filter
+        # Platform filter
         if genre and genre != "All":
-            g_lower = genre.lower()
-            if g_lower in ["netflix", "prime video", "hulu", "disney+"]:
-                col_map = {
-                    "netflix": "Netflix",
-                    "prime video": "Prime Video",
-                    "hulu": "Hulu",
-                    "disney+": "Disney+",
-                }
+            g_lower = genre.strip().lower()
+            col_map = {
+                "netflix": "Netflix",
+                "prime video": "Prime Video",
+                "prime": "Prime Video",
+                "disney+": "Disney+",
+                "disney": "Disney+",
+                "hulu": "Hulu",
+            }
+            if g_lower in col_map:
                 col = col_map.get(g_lower, "Netflix")
                 filtered = merged[merged[col] == 1]
             else:
@@ -211,7 +219,9 @@ def get_content_performance(
         filtered["watch_time_hrs"] = (filtered["watch_minutes"] * 28.5 / 60.0).round(1)
         filtered["completion_pct"] = (filtered["avg_completion"] * 100.0).round(1)
         filtered["retention_pct"] = (0.6 * filtered["rt_num"] + 0.4 * (1.0 - filtered["churn_rate"]) * 100.0).round(1)
-        filtered["sub_impact_num"] = ((filtered["retention_pct"] - 50.0) * filtered["total_sessions"] * 4.2).astype(int)
+        filtered["sub_impact_num"] = (
+            (filtered["retention_pct"] - 50.0) * filtered["total_sessions"] * 4.2
+        ).astype(int)
 
         # Determine primary platform
         def get_platform_label(r):
@@ -235,7 +245,10 @@ def get_content_performance(
         elif sort_by == "sub_impact":
             sorted_df = filtered.sort_values(by=["sub_impact_num", "retention_pct"], ascending=[False, False])
         else:
-            sorted_df = filtered.sort_values(by=["rt_num", "retention_pct", "total_sessions"], ascending=[False, False, False])
+            sorted_df = filtered.sort_values(
+                by=["rt_num", "retention_pct", "total_sessions"],
+                ascending=[False, False, False],
+            )
 
         top_df = sorted_df.head(limit)
 
@@ -261,14 +274,23 @@ def get_content_performance(
                 action_color = "bg-rose-950/60 text-rose-400 border-rose-800/80 hover:bg-rose-900/60"
 
             sub_str = f"+{delta:,}" if delta >= 0 else f"{delta:,}"
-            hrs_str = f"{row['watch_time_hrs']} hrs" if row["watch_time_hrs"] < 1000 else f"{(row['watch_time_hrs']/1000.0):.1f}K hrs"
+            if row["watch_time_hrs"] < 1000:
+                hrs_str = f"{row['watch_time_hrs']} hrs"
+            else:
+                hrs_str = f"{(row['watch_time_hrs']/1000.0):.1f}K hrs"
+
+            rt_str = (
+                str(row["Rotten Tomatoes"])
+                if pd.notna(row["Rotten Tomatoes"]) and str(row["Rotten Tomatoes"]).strip() != ""
+                else f"{int(rt)}/100"
+            )
 
             items.append({
                 "content_id": str(row["content_id"]),
                 "title": str(row["Title"]),
                 "year": str(int(row["Year"])) if pd.notna(row["Year"]) else "2020",
                 "age": str(row["Age"]) if pd.notna(row["Age"]) and str(row["Age"]) != "" else "13+",
-                "rotten_tomatoes": str(row["Rotten Tomatoes"]) if pd.notna(row["Rotten Tomatoes"]) else f"{int(rt)}/100",
+                "rotten_tomatoes": rt_str,
                 "genre": row["platform_name"],
                 "watchTime": hrs_str,
                 "completion": f"{int(round(comp))}%",
@@ -288,19 +310,23 @@ def get_content_performance(
 
         # Dynamic AI actions from actual Kaggle titles
         top_title = items[0]["title"] if items else "The Irishman"
+        top_rt = items[0]["rotten_tomatoes"] if items else "98/100"
+        top_ret = items[0]["retention"] if items else "96%"
         second_title = items[1]["title"] if len(items) > 1 else "Dangal"
+        second_rt = items[1]["rotten_tomatoes"] if len(items) > 1 else "97/100"
+
         actions = [
             {
                 "title": f"Renew & Feature '{top_title}'",
-                "description": f"Has {items[0]['rotten_tomatoes'] if items else '98/100'} Rotten Tomatoes critic rating and {items[0]['retention'] if items else '96%'} modeled retention.",
+                "description": f"Has {top_rt} Rotten Tomatoes critic rating and {top_ret} modeled retention.",
             },
             {
                 "title": f"Spotlight '{second_title}' Globally",
-                "description": f"Outstanding viewer affinity ({items[1]['rotten_tomatoes'] if len(items) > 1 else '97/100'}). Recommended for high-retention onboarding playlists.",
+                "description": f"Outstanding viewer affinity ({second_rt}). Recommended for onboarding playlists.",
             },
             {
                 "title": "Kaggle OTT Catalog Expansion",
-                "description": f"Analyzing 9,515 verified Kaggle movie records across Netflix, Prime Video, Hulu, and Disney+.",
+                "description": "Analyzing 9,515 verified Kaggle records across Netflix, Prime, Hulu, and Disney+.",
             },
         ]
 
@@ -322,7 +348,6 @@ def get_content_performance(
         }
 
 
-
 @router.get("/search")
 def search_catalog(q: str = Query(..., min_length=1, description="Search term across Kaggle catalog")):
     """Search Kaggle movie catalog by title."""
@@ -332,7 +357,7 @@ def search_catalog(q: str = Query(..., min_length=1, description="Search term ac
             return {"results": []}
         df = pd.read_csv(raw_path)
         matched = df[df["Title"].astype(str).str.contains(q, case=False, na=False)].head(10)
-        
+
         results = []
         for _, row in matched.iterrows():
             rt = str(row.get("Rotten Tomatoes", "N/A"))

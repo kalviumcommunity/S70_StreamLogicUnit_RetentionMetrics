@@ -83,7 +83,10 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
 
 def create_access_token(email: str, user_id: int, remember_me: bool = False) -> str:
     """Generate signed JWT token for authenticated user."""
-    duration = datetime.timedelta(days=JWT_REMEMBER_ME_DAYS) if remember_me else datetime.timedelta(hours=JWT_EXPIRATION_HOURS)
+    if remember_me:
+        duration = datetime.timedelta(days=JWT_REMEMBER_ME_DAYS)
+    else:
+        duration = datetime.timedelta(hours=JWT_EXPIRATION_HOURS)
     expire = datetime.datetime.now(datetime.timezone.utc) + duration
     payload = {
         "sub": email,
@@ -101,7 +104,7 @@ def get_current_user_from_token(token: str, db: Session) -> Optional[User]:
         email: str = payload.get("sub")
         if email is None:
             return None
-        return db.query(User).filter(User.email == email, User.is_active == True).first()
+        return db.query(User).filter(User.email == email, User.is_active.is_(True)).first()
     except Exception:
         return None
 
@@ -297,7 +300,7 @@ def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
     # SQLite returns naive datetimes, make sure comparison is safe
     all_tokens = db.query(PasswordResetToken).filter(
         PasswordResetToken.token_hash == token_hash,
-        PasswordResetToken.is_used == False,
+        PasswordResetToken.is_used.is_(False),
     ).all()
 
     token_record = None
