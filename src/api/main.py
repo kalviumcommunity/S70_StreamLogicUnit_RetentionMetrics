@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from src.api.models import HealthResponse
-from src.api.routers import engagement, retention, predict, behavior
+from src.api.routers import engagement, retention, predict, behavior, auth
 
 load_dotenv()
 
@@ -35,9 +35,12 @@ app.include_router(engagement.router, prefix="/api", tags=["Engagement"])
 app.include_router(retention.router, prefix="/api", tags=["Retention"])
 app.include_router(predict.router, prefix="/api", tags=["Predict"])
 app.include_router(behavior.router, prefix="/api", tags=["Behavior"])
+app.include_router(auth.router, prefix="/api", tags=["Authentication"])
+app.include_router(auth.router, prefix="", tags=["Authentication"])
 
 
 @app.get("/api/health", response_model=HealthResponse, tags=["Health"])
 def health_check():
     """Health check endpoint for container orchestrators and CI/CD smoke tests."""
     return HealthResponse(status="ok")
+
