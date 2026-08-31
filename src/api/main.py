@@ -1,6 +1,5 @@
 """Main FastAPI application entrypoint for StreamPulse."""
 
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -18,13 +17,10 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS configuration
-allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
-allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()]
-
+# Robust CORS configuration supporting local dev and cloud deployments
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins if allowed_origins else ["*"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
