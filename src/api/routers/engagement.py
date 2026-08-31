@@ -321,3 +321,29 @@ def get_content_performance(
             "recommended_actions": [],
         }
 
+
+
+@router.get("/search")
+def search_catalog(q: str = Query(..., min_length=1, description="Search term across Kaggle catalog")):
+    """Search Kaggle movie catalog by title."""
+    try:
+        raw_path = Path("data/raw/kaggle_movies.csv")
+        if not raw_path.exists():
+            return {"results": []}
+        df = pd.read_csv(raw_path)
+        matched = df[df["Title"].astype(str).str.contains(q, case=False, na=False)].head(10)
+        
+        results = []
+        for _, row in matched.iterrows():
+            rt = str(row.get("Rotten Tomatoes", "N/A"))
+            year = str(row.get("Year", "2020"))
+            results.append({
+                "title": str(row["Title"]),
+                "year": year,
+                "rotten_tomatoes": rt if pd.notna(rt) and rt != "" else "N/A",
+                "category": "Kaggle Movie",
+            })
+        return {"query": q, "count": len(results), "results": results}
+    except Exception as exc:
+        logger.error("Search failed: %s", exc)
+        return {"query": q, "count": 0, "results": []}
