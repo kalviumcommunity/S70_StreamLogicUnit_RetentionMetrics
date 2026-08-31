@@ -5,11 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { AuthLayout, StreamPulseLogo, SSOButtons } from "@/components/AuthLayout";
-import { useAuth } from "@/context/AuthContext";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signup } = useAuth();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -66,19 +64,31 @@ export default function SignupPage() {
     }
 
     setLoading(true);
-    const result = await signup({
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      email: email.trim(),
-      password,
-      role: "Analytics",
-    });
-    setLoading(false);
+    try {
+      const res = await fetch("http://localhost:8000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          email: email.trim(),
+          password,
+          role: "Analytics",
+        }),
+      });
 
-    if (result.success) {
-      router.push("/");
-    } else {
-      setErrorMsg(result.error || "Registration failed. Please check your inputs.");
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.detail || "Registration failed. Please verify your inputs.");
+        setLoading(false);
+        return;
+      }
+
+      // Navigate to Login page with registered notification & prefilled email
+      router.push(`/login?registered=true&email=${encodeURIComponent(email.trim())}`);
+    } catch {
+      setErrorMsg("Unable to connect to StreamPulse API. Please ensure the backend is running.");
+      setLoading(false);
     }
   };
 

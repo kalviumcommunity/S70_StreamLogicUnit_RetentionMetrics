@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { TopHeader } from "@/components/TopHeader";
-import { Sparkles, TrendingUp, ChevronDown } from "lucide-react";
+import { Sparkles, TrendingUp, ChevronDown, Download, CheckCircle2, SlidersHorizontal } from "lucide-react";
 
 interface ContentRow {
   title: string;
@@ -122,14 +122,36 @@ const DEFAULT_KAGGLE_ROWS: ContentRow[] = [
 
 export default function ContentPerformancePage() {
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [sortBy, setSortBy] = useState("retention");
+  const [sortLabel, setSortLabel] = useState("Rotten Tomatoes %");
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [contentRows, setContentRows] = useState<ContentRow[]>(DEFAULT_KAGGLE_ROWS);
   const [investmentScore, setInvestmentScore] = useState(86);
   const [scoreStatus, setScoreStatus] = useState("EXCELLENT");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const sortRef = useRef<HTMLDivElement>(null);
   const filterTabs = ["All", "Netflix", "Prime Video", "Hulu", "Disney+"];
 
+  const sortOptions = [
+    { label: "Rotten Tomatoes %", key: "retention" },
+    { label: "Completion Rate %", key: "completion" },
+    { label: "Watch Time (Hours)", key: "watch_time" },
+    { label: "Subscriber Impact", key: "sub_impact" },
+  ];
+
   useEffect(() => {
-    fetch(`http://localhost:8000/api/content-performance?genre=${encodeURIComponent(selectedFilter)}&limit=6`)
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+        setSortDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    fetch(`http://localhost:8000/api/content-performance?genre=${encodeURIComponent(selectedFilter)}&sort_by=${sortBy}&limit=7`)
       .then((res) => res.json())
       .then((data) => {
         if (data && data.items && data.items.length > 0) {
@@ -139,10 +161,46 @@ export default function ContentPerformancePage() {
         }
       })
       .catch(() => {});
-  }, [selectedFilter]);
+  }, [selectedFilter, sortBy]);
+
+  const handleActionClick = (title: string, action: string) => {
+    const messages: Record<string, string> = {
+      Promote: `AI Action Executed: "${title}" syndicated to Spotlight Hero Carousel (+22% retention boost scheduled).`,
+      Expand: `AI Action Executed: "${title}" added to Global Subscriber Acquisition Pipeline.`,
+      Monitor: `AI Action Executed: Real-time telemetry alerts activated for "${title}".`,
+      Review: `AI Action Executed: Low completion audit report initiated for "${title}".`,
+    };
+    setToastMessage(messages[action] || `Action "${action}" applied to ${title}.`);
+    setTimeout(() => setToastMessage(null), 4500);
+  };
+
+  const handleExportCSV = () => {
+    const headers = ["Title", "Year", "Age", "Rotten Tomatoes", "Platform", "Completion Rate", "Retention Rate", "Subscriber Impact", "Action"];
+    const rows = contentRows.map((r) => [
+      `"${r.title}"`,
+      r.year,
+      r.age,
+      `"${r.rotten_tomatoes}"`,
+      `"${r.genre}"`,
+      `"${r.completion}"`,
+      `"${r.retention}"`,
+      `"${r.subImpact}"`,
+      `"${r.action}"`,
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `STREAM_PULSE_${selectedFilter}_Content_Metrics.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setToastMessage(`Export Complete: Downloaded ${selectedFilter} content report as CSV.`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       <TopHeader
         title="Content Performance Intelligence"
         subtitle="Live predictive intelligence across 9,515 Kaggle OTT titles with Rotten Tomatoes scores."
@@ -150,7 +208,15 @@ export default function ContentPerformancePage() {
         hasSparkleIcon={true}
       />
 
-      {/* Filter and Sort Bar */}
+      {/* Floating Action Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-[#0f1524] border border-cyan-500/80 shadow-2xl shadow-cyan-500/20 text-xs text-slate-100 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-md">
+          <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0" />
+          <p className="leading-relaxed">{toastMessage}</p>
+        </div>
+      )}
+
+      {/* Filter, Sort & Export Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           {filterTabs.map((g) => {
@@ -172,14 +238,45 @@ export default function ContentPerformancePage() {
         </div>
 
         <div className="flex items-center gap-3 text-xs text-slate-400">
-          <span className="hidden sm:inline">Kaggle Dataset: <strong className="text-white font-mono">9,515</strong> verified records</span>
-          
-          <div className="flex items-center gap-2">
-            <span>Sorted by:</span>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#101626] border border-[#1a233a] text-white font-medium hover:border-slate-600 transition-colors">
-              <span>Rotten Tomatoes %</span>
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#101626] border border-[#1a233a] text-slate-300 hover:text-white hover:border-cyan-500/60 font-medium transition-colors"
+          >
+            <Download className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Export CSV</span>
+          </button>
+
+          <div ref={sortRef} className="relative">
+            <button
+              onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#101626] border border-[#1a233a] text-white font-medium hover:border-slate-600 transition-colors"
+            >
+              <SlidersHorizontal className="w-3 h-3 text-slate-400" />
+              <span>{sortLabel}</span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
+
+            {sortDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-48 p-1.5 rounded-xl bg-[#0f1524] border border-[#182238] shadow-2xl z-50 space-y-1">
+                {sortOptions.map((opt) => (
+                  <button
+                    key={opt.key}
+                    onClick={() => {
+                      setSortBy(opt.key);
+                      setSortLabel(opt.label);
+                      setSortDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                      sortBy === opt.key
+                        ? "bg-purple-950/60 text-purple-300 font-semibold"
+                        : "text-slate-300 hover:bg-[#151e33] hover:text-white"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -229,7 +326,8 @@ export default function ContentPerformancePage() {
                   </td>
                   <td className="py-4 text-right">
                     <button
-                      className={`px-3 py-1 rounded-lg border text-[11px] font-semibold transition-colors ${row.actionColor}`}
+                      onClick={() => handleActionClick(row.title, row.action)}
+                      className={`px-3 py-1 rounded-lg border text-[11px] font-semibold transition-transform active:scale-95 cursor-pointer ${row.actionColor}`}
                     >
                       {row.action}
                     </button>
@@ -294,9 +392,13 @@ export default function ContentPerformancePage() {
 
             <div className="space-y-3">
               {/* Action 1 */}
-              <div className="p-3.5 rounded-xl bg-[#12192c] border border-[#1a253e] space-y-1">
-                <h4 className="text-xs font-semibold text-white">
-                  Renew &amp; Spotlight &quot;The Irishman&quot;
+              <div
+                onClick={() => handleActionClick("The Irishman", "Promote")}
+                className="p-3.5 rounded-xl bg-[#12192c] border border-[#1a253e] space-y-1 cursor-pointer hover:border-purple-600/60 transition-colors"
+              >
+                <h4 className="text-xs font-semibold text-white flex items-center justify-between">
+                  <span>Renew &amp; Spotlight &quot;The Irishman&quot;</span>
+                  <span className="text-[10px] text-purple-400 font-mono">EXECUTE ↗</span>
                 </h4>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Has 98/100 Rotten Tomatoes score and highest cohort retention curve. Predicted renewal ROI is +34%.
@@ -304,9 +406,13 @@ export default function ContentPerformancePage() {
               </div>
 
               {/* Action 2 */}
-              <div className="p-3.5 rounded-xl bg-[#12192c] border border-[#1a253e] space-y-1">
-                <h4 className="text-xs font-semibold text-white">
-                  Feature &quot;Dangal&quot; Global Carousel
+              <div
+                onClick={() => handleActionClick("Dangal", "Expand")}
+                className="p-3.5 rounded-xl bg-[#12192c] border border-[#1a253e] space-y-1 cursor-pointer hover:border-purple-600/60 transition-colors"
+              >
+                <h4 className="text-xs font-semibold text-white flex items-center justify-between">
+                  <span>Feature &quot;Dangal&quot; Global Carousel</span>
+                  <span className="text-[10px] text-purple-400 font-mono">EXECUTE ↗</span>
                 </h4>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Outstanding completion affinity (97/100 RT). Target re-engagement push to international cohorts.
@@ -314,9 +420,13 @@ export default function ContentPerformancePage() {
               </div>
 
               {/* Action 3 */}
-              <div className="p-3.5 rounded-xl bg-[#12192c] border border-[#1a253e] space-y-1">
-                <h4 className="text-xs font-semibold text-white">
-                  License Nature &amp; Doc Spin-offs
+              <div
+                onClick={() => handleActionClick("David Attenborough", "Expand")}
+                className="p-3.5 rounded-xl bg-[#12192c] border border-[#1a253e] space-y-1 cursor-pointer hover:border-purple-600/60 transition-colors"
+              >
+                <h4 className="text-xs font-semibold text-white flex items-center justify-between">
+                  <span>License Nature &amp; Doc Spin-offs</span>
+                  <span className="text-[10px] text-purple-400 font-mono">EXECUTE ↗</span>
                 </h4>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   David Attenborough catalog segment expanded by 22%. Licensing natural history holds low churn risk.

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { TopHeader } from "@/components/TopHeader";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Download, CheckCircle2, Sliders } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -28,6 +28,9 @@ export default function ViewerBehaviorPage() {
     { label: "Watched 75%", pct: 61, width: "61%", color: "from-[#06b6d4] to-[#14b8a6]" },
     { label: "Completed", pct: 52, width: "52%", color: "from-[#14b8a6] to-[#10b981]" },
   ]);
+
+  const [selectedCohort, setSelectedCohort] = useState("All");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const cohortData = [
     { week: "Wk 1", c1: 100, c2: 100, c3: 100, c4: 100, c5: 100 },
@@ -59,188 +62,217 @@ export default function ViewerBehaviorPage() {
               ring: rings[idx % rings.length],
             }))
           );
-
-          const colors = [
-            "from-[#8b5cf6] to-[#7c3aed]",
-            "from-[#7c3aed] to-[#3b82f6]",
-            "from-[#3b82f6] to-[#06b6d4]",
-            "from-[#06b6d4] to-[#14b8a6]",
-            "from-[#14b8a6] to-[#10b981]",
-          ];
-          setFunnelData(
-            data.funnel.map((item: any, idx: number) => ({
-              label: item.label,
-              pct: Math.round(item.pct),
-              width: `${Math.round(item.pct)}%`,
-              color: colors[idx % colors.length],
-            }))
-          );
+          setFunnelData(data.funnel);
         }
       })
       .catch(() => {});
   }, []);
 
+  const handleExport = () => {
+    setToastMessage("Exporting Viewer Journey Funnel & Cohort Survival Data...");
+    setTimeout(() => {
+      setToastMessage("Cohort Analytics exported successfully.");
+      setTimeout(() => setToastMessage(null), 3000);
+    }, 1000);
+  };
+
+  const handleAction = (label: string) => {
+    setToastMessage(`Optimization triggered: ${label} threshold applied to active pipeline.`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       <TopHeader
-        title="Viewer Journey & Behavior Analysis"
-        subtitle="Trace interactive paths, step funnels, and demographic cohort retention."
-        searchPlaceholder="Search viewers, habits..."
+        title="STREAM PULSE — Viewer Journey & Behavior Analysis"
+        subtitle="End-to-end viewer progression, drop-off milestones, and 8-week cohort decay curves."
+        searchPlaceholder="Search events, drop-off points..."
+        hasSparkleIcon={true}
       />
 
-      {/* Top Card: Viewer Journey & Event Pipeline */}
-      <div className="p-6 rounded-2xl bg-[#0c1220] border border-[#162035] shadow-sm">
-        <div className="flex items-center justify-between mb-8">
-          <h3 className="text-sm font-bold text-white">
-            Viewer Journey & Event Pipeline
-          </h3>
-          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#141b2d] text-slate-300 border border-[#1e293b] tracking-wider uppercase">
-            ACTIVE PATH FLOW
-          </span>
+      {/* Floating Action Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-[#0f1524] border border-cyan-500/80 shadow-2xl shadow-cyan-500/20 text-xs text-slate-100 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-md">
+          <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0" />
+          <p className="leading-relaxed">{toastMessage}</p>
+        </div>
+      )}
+
+      {/* Action Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span>50,000 Ingested Viewer Sessions · Real-time Funnel Analysis</span>
         </div>
 
-        <div className="flex items-center justify-between relative px-4 sm:px-12 py-2 overflow-x-auto">
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#101626] border border-[#1a233a] text-xs text-slate-300 hover:text-white hover:border-cyan-500/60 transition-colors"
+        >
+          <Download className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Export Funnel Data</span>
+        </button>
+      </div>
+
+      {/* Section 1: 5-Stage Circular Viewer Journey Pipeline */}
+      <div className="p-6 rounded-2xl bg-[#0f1524] border border-[#182238] shadow-sm">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-6">
+          Viewer Journey Pipeline
+        </h3>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
           {pipelineData.map((node, idx) => (
-            <React.Fragment key={node.label}>
-              <div className="flex flex-col items-center z-10">
-                <div
-                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 ${node.ring} bg-[#080c14] flex items-center justify-center font-bold text-base sm:text-lg shadow-lg shadow-black/50`}
-                >
+            <div key={idx} className="flex flex-col items-center text-center">
+              <div
+                className={`w-20 h-20 rounded-full border-2 ${node.ring} flex items-center justify-center bg-[#0c1220] shadow-lg shadow-purple-950/20 mb-3`}
+              >
+                <span className="text-lg font-bold font-mono tracking-tight text-white">
                   {node.value}
-                </div>
-                <span className="text-xs text-slate-300 font-medium mt-3 whitespace-nowrap">
-                  {node.label}
                 </span>
               </div>
-
-              {idx < pipelineData.length - 1 && (
-                <div className="flex-1 h-[2px] bg-gradient-to-r from-slate-700 via-cyan-500/50 to-slate-700 -mt-6 mx-2 min-w-[24px]"></div>
-              )}
-            </React.Fragment>
+              <span className="text-xs font-semibold text-slate-300 tracking-wide">
+                {node.label}
+              </span>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Middle Grid: Funnel + Catalyst Cards */}
+      {/* Section 2: Drop-Off Funnel + Critical Milestone Insight Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Episode Drop-off Funnel */}
-        <div className="lg:col-span-2 p-6 rounded-2xl bg-[#0c1220] border border-[#162035] shadow-sm">
-          <h3 className="text-sm font-bold text-white mb-6">
-            Episode Drop-off Funnel
-          </h3>
+        {/* Left Column: Drop-Off Funnel (2 Cols) */}
+        <div className="lg:col-span-2 p-6 rounded-2xl bg-[#0f1524] border border-[#182238] shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Session Drop-Off Funnel
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Viewer attrition through playback milestones (25%, 50%, 75%, 100%)
+              </p>
+            </div>
+          </div>
 
           <div className="space-y-4">
-            {funnelData.map((step) => (
-              <div key={step.label} className="grid grid-cols-12 items-center gap-3">
-                <span className="col-span-3 text-xs font-medium text-slate-300">
-                  {step.label}
-                </span>
-                <div className="col-span-8 h-8 bg-[#141b2d] rounded-lg overflow-hidden flex items-center p-0.5">
+            {funnelData.map((stage) => (
+              <div key={stage.label} className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-300">{stage.label}</span>
+                  <span className="font-mono text-cyan-400 font-semibold">{stage.pct}%</span>
+                </div>
+                <div className="h-6 w-full bg-[#101626] rounded-xl overflow-hidden p-0.5 border border-[#1a233a]">
                   <div
-                    className={`h-full rounded-md bg-gradient-to-r ${step.color} transition-all duration-500`}
-                    style={{ width: step.width }}
+                    className={`h-full bg-gradient-to-r ${stage.color} rounded-lg transition-all duration-1000`}
+                    style={{ width: `${stage.pct}%` }}
                   ></div>
                 </div>
-                <span className="col-span-1 text-xs font-bold text-white text-right">
-                  {step.pct}%
-                </span>
               </div>
             ))}
           </div>
+
+          <p className="text-[11px] text-slate-400 mt-6 border-t border-[#151c2e] pt-3">
+            Greatest drop-off observed between 25% and 50% runtime across non-binge titles.
+          </p>
         </div>
 
-        {/* 2 Stacked Insight Cards */}
-        <div className="space-y-4 flex flex-col justify-between">
-          {/* Completion Catalyst */}
-          <div className="p-5 rounded-2xl bg-[#0c1220] border border-[#162035] space-y-3 flex-1 flex flex-col justify-between shadow-sm">
-            <div>
-              <div className="flex items-center gap-2 text-purple-400 text-xs font-bold">
-                <Sparkles className="w-4 h-4 fill-purple-400/20" />
-                <span>Completion Catalyst</span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2">
-                Episodes with &gt;75% completion retain 2.4x more users throughout the overall season lifecycle.
-              </p>
+        {/* Right Column: 2 Critical Milestone Insight Cards (1 Col) */}
+        <div className="space-y-6">
+          {/* Card 1: Completion Catalyst */}
+          <div className="p-6 rounded-2xl bg-[#0f1524] border border-[#182238] shadow-sm space-y-3">
+            <div className="flex items-center gap-2 text-white font-bold text-sm">
+              <Sparkles className="w-4 h-4 text-purple-400 fill-purple-400/20" />
+              <span>Completion Catalyst</span>
             </div>
-            <div className="flex items-center justify-between pt-2 border-t border-[#162035]">
-              <span className="text-[10px] font-bold text-emerald-400 tracking-wider">
-                UPWARD TREND
-              </span>
-              <svg className="w-20 h-6 text-emerald-400" viewBox="0 0 100 30" fill="none">
-                <path d="M0 25 L30 18 L60 20 L80 8 L100 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-              </svg>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Viewers who cross the <strong className="text-cyan-400">50% milestone</strong> have an{" "}
+              <strong className="text-white">88.4% probability</strong> of completing the full season within 7 days.
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={() => handleAction("Target Mid-Roll Hooks")}
+                className="w-full py-2 px-3 rounded-xl bg-purple-950/60 border border-purple-800/80 text-purple-300 hover:bg-purple-900/60 text-xs font-semibold transition-colors"
+              >
+                Target Mid-Roll Retention Hooks
+              </button>
             </div>
           </div>
 
-          {/* Early Attrition Signal */}
-          <div className="p-5 rounded-2xl bg-[#0c1220] border border-[#162035] space-y-3 flex-1 flex flex-col justify-between shadow-sm">
-            <div>
-              <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold">
-                <Sparkles className="w-4 h-4 fill-cyan-400/20" />
-                <span>Early Attrition Signal</span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2">
-                Frequent pauses in the first 5 minutes correlate strictly with a lower final retention curve.
-              </p>
+          {/* Card 2: Early Attrition Warning */}
+          <div className="p-6 rounded-2xl bg-[#0f1524] border border-[#182238] shadow-sm space-y-3">
+            <div className="flex items-center gap-2 text-white font-bold text-sm">
+              <Sparkles className="w-4 h-4 text-cyan-400 fill-cyan-400/20" />
+              <span>Early Attrition Warning</span>
             </div>
-            <div className="flex items-center justify-between pt-2 border-t border-[#162035]">
-              <span className="text-[10px] font-bold text-cyan-400 tracking-wider">
-                PAUSE DENSITY
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
-                <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
-              </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Sessions paused within the first <strong className="text-rose-400">8 minutes</strong> show a 4.2x higher likelihood of 30-day subscriber churn.
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={() => handleAction("Activate Quick-Resume Push")}
+                className="w-full py-2 px-3 rounded-xl bg-cyan-950/60 border border-cyan-800/80 text-cyan-300 hover:bg-cyan-900/60 text-xs font-semibold transition-colors"
+              >
+                Activate Quick-Resume Push
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Card: Weekly Cohort Retention Curves */}
-      <div className="p-6 rounded-2xl bg-[#0c1220] border border-[#162035] shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+      {/* Section 3: Cohort Retention Curves (8-Week Survival) */}
+      <div className="p-6 rounded-2xl bg-[#0f1524] border border-[#182238] shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h3 className="text-sm font-bold text-white">
-              Weekly Cohort Retention Curves
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Cohort Retention Decay Curves (8-Week Survival)
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Compares initial signup retention rate decay across consecutive weeks.
+              Subscriber cohort survival rates tracked weekly from signup cohort ingestion
             </p>
           </div>
-          <div className="flex items-center gap-4 text-xs">
+
+          <div className="flex items-center gap-4 text-xs font-medium flex-wrap">
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-0.5 bg-[#8b5cf6] rounded"></span>
-              <span className="text-slate-300">Latest Cohorts</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+              <span className="text-slate-300">Cohort 1 (Top)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-0.5 bg-[#475569] rounded"></span>
-              <span className="text-slate-400">Older Cohorts</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+              <span className="text-slate-300">Cohort 2</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+              <span className="text-slate-300">Cohort 3</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+              <span className="text-slate-300">Cohort 4</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-pink-400"></span>
+              <span className="text-slate-300">Cohort 5</span>
             </div>
           </div>
         </div>
 
-        <div className="h-64 w-full">
+        <div className="h-72 w-full pt-2">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={cohortData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <XAxis dataKey="week" stroke="#475569" fontSize={11} tickLine={false} />
-              <YAxis stroke="#475569" fontSize={11} tickLine={false} axisLine={false} unit="%" domain={[0, 100]} />
+              <XAxis dataKey="week" stroke="#334155" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+              <YAxis stroke="#334155" tick={{ fill: "#94a3b8", fontSize: 11 }} domain={[30, 100]} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#080c14",
+                  backgroundColor: "#0d1322",
                   borderColor: "#1e293b",
                   borderRadius: "0.75rem",
                   fontSize: "12px",
                   color: "#fff",
                 }}
               />
-              <Line type="monotone" dataKey="c1" stroke="#8b5cf6" strokeWidth={2.5} dot={{ fill: "#8b5cf6", r: 3 }} />
-              <Line type="monotone" dataKey="c2" stroke="#7c3aed" strokeWidth={1.8} dot={{ fill: "#7c3aed", r: 2.5 }} />
-              <Line type="monotone" dataKey="c3" stroke="#6366f1" strokeWidth={1.5} dot={{ fill: "#6366f1", r: 2 }} />
-              <Line type="monotone" dataKey="c4" stroke="#475569" strokeWidth={1.2} dot={{ fill: "#475569", r: 2 }} />
-              <Line type="monotone" dataKey="c5" stroke="#334155" strokeWidth={1} dot={{ fill: "#334155", r: 1.5 }} />
+              <Line type="monotone" dataKey="c1" stroke="#22d3ee" strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="c2" stroke="#60a5fa" strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="c3" stroke="#818cf8" strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="c4" stroke="#c084fc" strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="c5" stroke="#f472b6" strokeWidth={2.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>

@@ -57,15 +57,16 @@ export const StreamPulseLogo: React.FC<{ subtitle?: string }> = ({
         </div>
       </div>
 
-      <h1 className="text-xl font-bold tracking-tight text-white">
-        Stream Pulse
+      <h1 className="text-xl font-extrabold tracking-wider text-white uppercase">
+        STREAM PULSE
       </h1>
-      <p className="text-[11px] font-medium text-cyan-400 mt-0.5 tracking-wide">
+      <p className="text-[11px] font-semibold text-cyan-400 mt-0.5 tracking-wide">
         {subtitle}
       </p>
     </div>
   );
 };
+
 
 export const SSOButtons: React.FC<{ label?: string }> = ({ label = "OR CONTINUE WITH" }) => {
   return (

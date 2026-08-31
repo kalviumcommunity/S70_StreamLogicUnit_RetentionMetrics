@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { TopHeader } from "@/components/TopHeader";
-import { Sparkles, Cpu } from "lucide-react";
+import { Sparkles, Cpu, CheckCircle2, BookmarkPlus, RotateCcw } from "lucide-react";
 
 export default function RetentionRecommendationsPage() {
   const [completionRate, setCompletionRate] = useState(75.0);
@@ -15,6 +15,26 @@ export default function RetentionRecommendationsPage() {
   const [riskScore, setRiskScore] = useState(0.28);
   const [riskTier, setRiskTier] = useState<"low" | "medium" | "high">("low");
   const [loading, setLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const presets = [
+    {
+      name: "Power Viewer",
+      params: { comp: 92.0, dur: 58.0, sess: 24, inact: 1, binge: 4.8, pause: 0.03 },
+    },
+    {
+      name: "Casual Active",
+      params: { comp: 75.0, dur: 45.0, sess: 12, inact: 3, binge: 3.5, pause: 0.08 },
+    },
+    {
+      name: "At-Risk Slump",
+      params: { comp: 42.0, dur: 18.0, sess: 4, inact: 9, binge: 1.2, pause: 0.22 },
+    },
+    {
+      name: "Critical Churn",
+      params: { comp: 15.0, dur: 8.0, sess: 1, inact: 18, binge: 0.4, pause: 0.45 },
+    },
+  ];
 
   useEffect(() => {
     async function runInference() {
@@ -59,182 +79,274 @@ export default function RetentionRecommendationsPage() {
     return () => clearTimeout(timer);
   }, [completionRate, watchDuration, sessionCount, daysInactive, bingeScore, pauseRate]);
 
-  const driversList = [
-    { name: "Completion Rate", importance: 36.4, signal: "Strongest retention predictor", color: "from-cyan-400 to-blue-500" },
-    { name: "Watch Duration", importance: 33.4, signal: "Higher duration correlates with multi-month tenure", color: "from-blue-500 to-indigo-500" },
-    { name: "Pause Rate", importance: 18.1, signal: "Playback friction directly triggers drop-offs", color: "from-indigo-500 to-purple-500" },
-    { name: "Session Frequency", importance: 8.4, signal: "Consistent weekly logins buffer against churn", color: "from-purple-500 to-pink-500" },
-    { name: "Inactivity Recency", importance: 3.5, signal: "Inactivity >7 days is the top leading churn alert", color: "from-pink-500 to-rose-500" },
-  ];
+  const loadPreset = (p: typeof presets[0]) => {
+    setCompletionRate(p.params.comp);
+    setWatchDuration(p.params.dur);
+    setSessionCount(p.params.sess);
+    setDaysInactive(p.params.inact);
+    setBingeScore(p.params.binge);
+    setPauseRate(p.params.pause);
+    setToastMessage(`Loaded Preset Scenario: "${p.name}". ML prediction updated.`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleSaveScenario = () => {
+    setToastMessage(`Simulation Scenario Saved: Churn Score ${(riskScore * 100).toFixed(0)}% (${riskTier.toUpperCase()}) added to retention report.`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const riskPct = (riskScore * 100).toFixed(0);
+  const tierColor =
+    riskTier === "low"
+      ? "text-emerald-400 border-emerald-800/80 bg-emerald-950/60"
+      : riskTier === "medium"
+      ? "text-amber-400 border-amber-800/80 bg-amber-950/60"
+      : "text-rose-400 border-rose-800/80 bg-rose-950/60";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       <TopHeader
-        title="AI Recommendations & Retention Drivers"
-        subtitle="Machine learning feature attribution and real-time subscriber risk simulation."
-        searchPlaceholder="Search models, features..."
+        title="STREAM PULSE — AI Recommendations & Churn Simulator"
+        subtitle="Interact with real-time ML features to simulate subscriber retention sensitivity."
+        searchPlaceholder="Search model parameters, sensitivity..."
+        hasSparkleIcon={true}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="p-6 rounded-2xl bg-[#0c1220] border border-[#162035]">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
-                  <span>Ranked Retention Drivers (Random Forest)</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Relative feature importance derived from 5,000 subscriber behavior histories.
-                </p>
-              </div>
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
-                83.5% Precision
-              </span>
-            </div>
+      {/* Floating Action Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-[#0f1524] border border-cyan-500/80 shadow-2xl shadow-cyan-500/20 text-xs text-slate-100 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-md">
+          <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0" />
+          <p className="leading-relaxed">{toastMessage}</p>
+        </div>
+      )}
 
-            <div className="space-y-4">
-              {driversList.map((driver) => (
-                <div key={driver.name} className="space-y-1.5">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-white">{driver.name}</span>
-                    <span className="font-bold text-cyan-400">{driver.importance}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-[#141b2d] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${driver.color}`}
-                      style={{ width: `${driver.importance * 2}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-[11px] text-slate-400">{driver.signal}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#0c1220] border border-[#162035] grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-            <div className="p-4 rounded-xl bg-[#080c14] border border-[#162035]">
-              <span className="text-[10px] uppercase font-bold text-slate-500">Model Accuracy</span>
-              <p className="text-2xl font-black text-white mt-1">83.6%</p>
-              <span className="text-[10px] text-emerald-400">1,000 Test Cohorts</span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#080c14] border border-[#162035]">
-              <span className="text-[10px] uppercase font-bold text-slate-500">Churn Precision</span>
-              <p className="text-2xl font-black text-cyan-400 mt-1">83.5%</p>
-              <span className="text-[10px] text-slate-400">PRD Benchmark &gt;= 80%</span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#080c14] border border-[#162035]">
-              <span className="text-[10px] uppercase font-bold text-slate-500">F1 Score</span>
-              <p className="text-2xl font-black text-purple-400 mt-1">82.2%</p>
-              <span className="text-[10px] text-slate-400">Harmonic Mean</span>
-            </div>
-          </div>
+      {/* Quick Presets Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#0f1524] border border-[#182238]">
+        <div className="flex items-center gap-2 text-xs font-semibold text-white">
+          <Sparkles className="w-4 h-4 text-cyan-400" />
+          <span>Quick Benchmark Presets:</span>
         </div>
 
-        <div className="p-6 rounded-2xl bg-[#0c1220] border border-[#162035] space-y-6">
-          <div>
-            <div className="flex items-center gap-2 text-white font-bold text-sm">
-              <Cpu className="w-4 h-4 text-cyan-400" />
-              <span>Live Churn Risk Simulator</span>
+        <div className="flex items-center gap-2 overflow-x-auto">
+          {presets.map((preset) => (
+            <button
+              key={preset.name}
+              onClick={() => loadPreset(preset)}
+              className="px-3 py-1.5 rounded-xl bg-[#0c1220] border border-[#1a253c] hover:border-cyan-500/60 text-xs font-medium text-slate-300 hover:text-white transition-all shrink-0"
+            >
+              {preset.name}
+            </button>
+          ))}
+          <button
+            onClick={handleSaveScenario}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#8b5cf6] text-white hover:bg-purple-600 text-xs font-semibold shadow-lg shadow-purple-600/20 transition-all shrink-0 ml-1"
+          >
+            <BookmarkPlus className="w-3.5 h-3.5" />
+            <span>Save Scenario</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main 2-Column Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Interactive ML Parameter Sliders (2 Cols) */}
+        <div className="lg:col-span-2 p-6 rounded-2xl bg-[#0f1524] border border-[#182238] shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-[#182238] pb-4">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Subscriber Feature Inputs
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Random Forest Telemetry Matrix (Models trained on 50,000 viewing sessions)
+              </p>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
-              Adjust subscriber engagement telemetry to simulate risk predictions.
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+              <span className="text-[11px] font-mono text-cyan-400">ML INFERENCE ACTIVE</span>
+            </div>
           </div>
 
-          <div className="space-y-4 text-xs">
-            <div>
-              <div className="flex justify-between font-medium text-slate-300 mb-1">
-                <span>Avg Completion Rate</span>
-                <span className="font-bold text-white">{completionRate}%</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Slider 1: Completion Rate */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300">Avg Completion Rate</span>
+                <span className="font-mono text-cyan-400 font-bold">{completionRate}%</span>
               </div>
               <input
                 type="range"
                 min="5"
                 max="100"
+                step="1"
                 value={completionRate}
-                onChange={(e) => setCompletionRate(Number(e.target.value))}
-                className="w-full accent-cyan-400 bg-[#141b2d] rounded-lg h-1.5"
+                onChange={(e) => setCompletionRate(parseFloat(e.target.value))}
+                className="w-full accent-cyan-400 bg-[#12192c] rounded-lg cursor-pointer"
               />
+              <span className="text-[10px] text-slate-500 block">Baseline benchmark: 74%</span>
             </div>
 
-            <div>
-              <div className="flex justify-between font-medium text-slate-300 mb-1">
-                <span>Avg Watch Duration</span>
-                <span className="font-bold text-white">{watchDuration}m</span>
+            {/* Slider 2: Watch Duration */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300">Avg Watch Duration</span>
+                <span className="font-mono text-cyan-400 font-bold">{watchDuration} min</span>
               </div>
               <input
                 type="range"
                 min="5"
                 max="120"
+                step="1"
                 value={watchDuration}
-                onChange={(e) => setWatchDuration(Number(e.target.value))}
-                className="w-full accent-cyan-400 bg-[#141b2d] rounded-lg h-1.5"
+                onChange={(e) => setWatchDuration(parseFloat(e.target.value))}
+                className="w-full accent-cyan-400 bg-[#12192c] rounded-lg cursor-pointer"
               />
+              <span className="text-[10px] text-slate-500 block">Baseline benchmark: 42 min</span>
             </div>
 
-            <div>
-              <div className="flex justify-between font-medium text-slate-300 mb-1">
-                <span>Days Inactive</span>
-                <span className="font-bold text-white">{daysInactive}d</span>
+            {/* Slider 3: Session Count */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300">30-Day Session Count</span>
+                <span className="font-mono text-purple-400 font-bold">{sessionCount} sessions</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="60"
+                step="1"
+                value={sessionCount}
+                onChange={(e) => setSessionCount(parseInt(e.target.value, 10))}
+                className="w-full accent-purple-400 bg-[#12192c] rounded-lg cursor-pointer"
+              />
+              <span className="text-[10px] text-slate-500 block">Baseline benchmark: 14 sessions</span>
+            </div>
+
+            {/* Slider 4: Inactivity Days */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300">Days Since Last Session</span>
+                <span className="font-mono text-rose-400 font-bold">{daysInactive} days</span>
               </div>
               <input
                 type="range"
                 min="0"
                 max="30"
+                step="1"
                 value={daysInactive}
-                onChange={(e) => setDaysInactive(Number(e.target.value))}
-                className="w-full accent-purple-400 bg-[#141b2d] rounded-lg h-1.5"
+                onChange={(e) => setDaysInactive(parseInt(e.target.value, 10))}
+                className="w-full accent-rose-400 bg-[#12192c] rounded-lg cursor-pointer"
               />
+              <span className="text-[10px] text-slate-500 block">Critical threshold: &gt; 7 days</span>
             </div>
 
-            <div>
-              <div className="flex justify-between font-medium text-slate-300 mb-1">
-                <span>Pause Rate (pauses/min)</span>
-                <span className="font-bold text-white">{pauseRate.toFixed(2)}</span>
+            {/* Slider 5: Binge Score */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300">Binge Watching Score</span>
+                <span className="font-mono text-cyan-400 font-bold">{bingeScore} / 5.0</span>
               </div>
               <input
                 type="range"
                 min="0"
-                max="50"
-                value={Math.round(pauseRate * 100)}
-                onChange={(e) => setPauseRate(Number(e.target.value) / 100)}
-                className="w-full accent-rose-400 bg-[#141b2d] rounded-lg h-1.5"
+                max="5.0"
+                step="0.1"
+                value={bingeScore}
+                onChange={(e) => setBingeScore(parseFloat(e.target.value))}
+                className="w-full accent-cyan-400 bg-[#12192c] rounded-lg cursor-pointer"
               />
+              <span className="text-[10px] text-slate-500 block">Consecutive episode depth index</span>
+            </div>
+
+            {/* Slider 6: Pause Rate */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-semibold text-slate-300">Pause Frequency (per min)</span>
+                <span className="font-mono text-purple-400 font-bold">{pauseRate}</span>
+              </div>
+              <input
+                type="range"
+                min="0.0"
+                max="0.5"
+                step="0.01"
+                value={pauseRate}
+                onChange={(e) => setPauseRate(parseFloat(e.target.value))}
+                className="w-full accent-purple-400 bg-[#12192c] rounded-lg cursor-pointer"
+              />
+              <span className="text-[10px] text-slate-500 block">Playback friction metric</span>
             </div>
           </div>
+        </div>
 
-          <div className="p-4 rounded-xl bg-[#080c14] border border-[#162035] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
-                Predicted Churn Risk
-              </span>
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
-                  riskTier === "low"
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                    : riskTier === "medium"
-                    ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                    : "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                }`}
-              >
-                {riskTier} Risk
-              </span>
+        {/* Right Column: Real-Time Churn Risk Prediction Gauge & Directives */}
+        <div className="space-y-6">
+          {/* Prediction Gauge */}
+          <div className="p-6 rounded-2xl bg-[#0f1524] border border-[#182238] shadow-sm flex flex-col items-center text-center">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 self-start">
+              PREDICTED CHURN RISK
+            </h3>
+
+            <div className="relative w-44 h-44 flex items-center justify-center my-2">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" className="stroke-[#182238] fill-none" strokeWidth="10" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  className={`fill-none transition-all duration-500 ${
+                    riskTier === "low"
+                      ? "stroke-emerald-400"
+                      : riskTier === "medium"
+                      ? "stroke-amber-400"
+                      : "stroke-rose-400"
+                  }`}
+                  strokeWidth="10"
+                  strokeDasharray="251.2"
+                  strokeDashoffset={251.2 - (251.2 * riskScore)}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute flex flex-col items-center">
+                <span className="text-4xl font-bold text-white tracking-tight font-mono">
+                  {riskPct}%
+                </span>
+                <span className={`text-[11px] font-bold tracking-wider mt-0.5 uppercase px-2 py-0.5 rounded-full border ${tierColor}`}>
+                  {riskTier} Risk
+                </span>
+              </div>
             </div>
 
-            <div className="text-3xl font-black text-white">
-              {(riskScore * 100).toFixed(1)}%
-            </div>
-
-            <p className="text-[11px] text-slate-400 pt-1 border-t border-[#141b2d]">
+            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
               {riskTier === "low"
-                ? "Healthy viewer engagement. Prime candidate for loyalty promotions."
+                ? "Subscriber shows high retention affinity and low probability of 30-day cancellation."
                 : riskTier === "medium"
-                ? "Moderate engagement decay. Trigger personalized watchlist notifications."
-                : "Critical churn hazard. Recommend immediate discount or content reactivation email."}
+                ? "Moderate churn indicators detected. Re-engagement carousel and push notifications advised."
+                : "High-risk churn signature. Automated retention discount and targeted content alert recommended."}
             </p>
+          </div>
+
+          {/* AI Automated Intervention */}
+          <div className="p-6 rounded-2xl bg-[#0f1524] border border-[#182238] shadow-sm space-y-3">
+            <div className="flex items-center gap-2 text-white font-bold text-sm">
+              <Cpu className="w-4 h-4 text-purple-400" />
+              <span>Recommended Intervention</span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#12192c] border border-[#1a253e] space-y-1">
+              <h4 className="text-xs font-semibold text-white">
+                {riskTier === "low"
+                  ? "Loyalty Milestone Reward"
+                  : riskTier === "medium"
+                  ? "Personalized Carousel Push"
+                  : "Immediate Win-Back Incentive"}
+              </h4>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                {riskTier === "low"
+                  ? "Deliver early access to next season premier of high-completion genres."
+                  : riskTier === "medium"
+                  ? "Trigger notification for trending titles with >90% completion rates."
+                  : "Dispatch 20% renewal incentive combined with curated top-rated movies."}
+              </p>
+            </div>
           </div>
         </div>
       </div>
