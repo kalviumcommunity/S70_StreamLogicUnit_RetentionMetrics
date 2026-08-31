@@ -9,6 +9,10 @@ from typing import Optional
 from src.api.database import Base
 
 
+def utc_now():
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
 class User(Base):
     """Database model for registered StreamPulse users."""
 
@@ -23,8 +27,8 @@ class User(Base):
     role = Column(String(64), default="Analytics", nullable=False)
     organization = Column(String(128), default="StreamPulse Media", nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
     reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
 
@@ -39,7 +43,7 @@ class PasswordResetToken(Base):
     token_hash = Column(String(255), unique=True, index=True, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     is_used = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
     user = relationship("User", back_populates="reset_tokens")
 

@@ -8,6 +8,7 @@ import sys
 import logging
 from pathlib import Path
 import pandas as pd
+pd.set_option('future.no_silent_downcasting', True)
 from src.processing.schema import DATASET_CONTRACTS, validate_schema
 
 logging.basicConfig(
