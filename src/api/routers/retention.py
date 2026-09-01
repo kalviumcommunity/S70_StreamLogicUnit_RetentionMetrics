@@ -76,7 +76,10 @@ def get_retention_summary(
 
             # Adjust metrics according to time range window
             tr = (time_range or "30d").lower()
-            if "7" in tr:
+            if "today" in tr or "1d" in tr or "day" in tr:
+                ret_rate = min(96.5, ret_rate + 5.4)
+                churn_rate = max(3.5, churn_rate - 5.4)
+            elif "7" in tr:
                 ret_rate = min(94.2, ret_rate + 3.2)
                 churn_rate = max(5.8, churn_rate - 3.2)
             elif "quarter" in tr:
