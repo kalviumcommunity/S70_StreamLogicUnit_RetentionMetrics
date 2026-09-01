@@ -27,6 +27,29 @@ interface TimeRangeData {
 }
 
 const TIMEFRAME_CONFIGS: Record<string, TimeRangeData> = {
+  "Today (Day-Wise)": {
+    kpis: {
+      retentionRate: "94.6%",
+      retentionDelta: "+1.2% Today",
+      avgWatchTime: "5.4 hrs",
+      watchTimeDelta: "+18.5%",
+      churnRisk: "5.4%",
+      churnRiskDelta: "-3.1%",
+      activeSubscribers: "1.44M",
+      activeSubDelta: "+8.9K Today",
+    },
+    trend: [
+      { period: "12 AM", retention: 91, duration: 48 },
+      { period: "3 AM", retention: 88, duration: 36 },
+      { period: "6 AM", retention: 89, duration: 42 },
+      { period: "9 AM", retention: 92, duration: 49 },
+      { period: "12 PM", retention: 94, duration: 55 },
+      { period: "3 PM", retention: 93, duration: 52 },
+      { period: "6 PM", retention: 96, duration: 62 },
+      { period: "9 PM", retention: 98, duration: 68 },
+      { period: "11 PM", retention: 95, duration: 59 },
+    ],
+  },
   "Last 7 Days": {
     kpis: {
       retentionRate: "89.4%",
@@ -226,6 +249,7 @@ export default function DashboardOverviewPage() {
   // Sync with backend API
   useEffect(() => {
     const apiRangeMap: Record<string, string> = {
+      "Today (Day-Wise)": "today",
       "Last 7 Days": "7d",
       "Last 30 Days": "30d",
       "Last Quarter": "quarter",
